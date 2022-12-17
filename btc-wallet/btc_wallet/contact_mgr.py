@@ -24,3 +24,8 @@ class ContactManager():
 
   def add_contact(self, new_contact):
     self.contacts.append(new_contact)
+
+  def get_contact(self, id: int) -> Contact:
+    return self.contacts[id-1]
+
+  

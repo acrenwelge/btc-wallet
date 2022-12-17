@@ -1,6 +1,10 @@
 from wallet_mgr import WalletManager
 from contact_mgr import ContactManager
 from contact import Contact
+import subprocess
+import qrcode
+from shutil import which
+from util import *
 
 def start():
   print("BTC Wallet app starting...")
@@ -73,7 +77,8 @@ def contact_menu():
   while True:
     print("1. View Contact List")
     print("2. Add new contact")
-    print("3. Back to main menu")
+    print("3. Get individual contact")
+    print("4. Back to main menu")
     choice = int(input())
     if choice == 1:
       cm.view_list()
@@ -82,8 +87,24 @@ def contact_menu():
       name = input()
       print("Enter new contact's BTC address:")
       addr = input()
-      cm.add_contact(Contact(name, addr))
+      if (btc_addr_is_valid(addr)):
+        cm.add_contact(Contact(name, addr))
+        print(f'Contact added: {cm}')
+      else:
+        print('Invalid address - contact not added. Try again')
     elif choice == 3:
+      print('Enter the contact ID number to retrieve:')
+      contact_id = int(input())
+      contact = cm.get_contact(contact_id)
+      print(f"Name: {contact.name}")
+      print(f"Bitcoin address (text): {contact.addr}")
+      print("Bitcoin address (QR code):")
+      # Display in console if 'qr' command installed, otherwise open file viewer
+      if which('qr') is not None:
+        subprocess.call(['qr', contact.addr])
+      else:
+        qrcode.make(contact.addr).show()
+    elif choice == 4:
       break
   main_menu()
 

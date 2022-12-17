@@ -5,12 +5,14 @@ Ideas:
 * BTC address verification (any time a btc address is input)
 
 In progress:
-* Maintain list of contacts with addresses
+
 
 Completed:
 * Login
 * Recover from seed phrase backup
 * Generate new wallet
 * Contact list
-  * View
+  * Maintain list of contacts with addresses
+  * View contacts + addresses
   * Add new contacts
+  * QR code generation for addresses of contacts
