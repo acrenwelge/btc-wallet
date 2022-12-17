@@ -1,16 +1,5 @@
-from coinage import BitcoinBlockchain, FailedValidation, FailedChecksumValidation
+from validate import Validation
 
-btc_validation = BitcoinBlockchain()
-
+# note: testnest addresses are not valid using this library
 def btc_addr_is_valid(addr):
-  try:
-    valid = btc_validation.validate(addr)
-    if valid.is_from_main_net():
-      return True
-    else:
-      print('ERROR: this is not a mainnet address')
-  except FailedChecksumValidation:
-    print('ERROR: failed checksum: you probably made a mistake when copying this address')
-  except FailedValidation:
-    print('ERROR: this is not a valid bitcoin address') 
-  return False
+  return Validation.is_btc_address(addr)

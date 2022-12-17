@@ -19,7 +19,9 @@ pip install btc-wallet
 ## Built With
 * [Hatch](https://hatch.pypa.io/latest/)
 * [Python-mnemonic](https://github.com/trezor/python-mnemonic)
+* [qrcode](https://pypi.org/project/qrcode/)
+* [pycoin](https://pycoin.readthedocs.io/en/latest/index.html)
 
 ## License
 
-`btc-wallet` is distributed under the terms of the [MIT](https://spdx.org/licenses/MIT.html) license.
+This program is distributed under the terms of the [MIT](https://spdx.org/licenses/MIT.html) license.

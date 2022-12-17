@@ -38,7 +38,11 @@ def main_menu():
     print("2. View / manage contact list")
     print("3. Send bitcoin transaction")
     print("4. Quit")
-    choice = int(input())
+    try:
+      choice = int(input())
+    except:
+      print('Invalid input - try again')
+      continue
     if choice >= 1 and choice <= 4:
       break
     else:
@@ -57,7 +61,12 @@ def wallet_menu():
     print("2. Recover bitcoin wallet")
     print("3. Generate new wallet")
     print("4. Back to main menu")
-    choice = int(input())
+    choice = None
+    try:
+      choice = int(input())
+    except ValueError:
+      print('Invalid input - try again')
+      continue
     if choice == 1:
       addr = wm.get_addr()
       print(addr)
@@ -79,7 +88,12 @@ def contact_menu():
     print("2. Add new contact")
     print("3. Get individual contact")
     print("4. Back to main menu")
-    choice = int(input())
+    choice = None
+    try:
+      choice = int(input())
+    except ValueError:
+      print('Invalid input - try again')
+      continue
     if choice == 1:
       cm.view_list()
     elif choice == 2:
