@@ -3,6 +3,7 @@
 
 # Custom
 test-addresses.txt
+testnet-endpoint.txt
 .DS_Store
 
 ### Python ###

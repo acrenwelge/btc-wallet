@@ -1,4 +1,3 @@
-from wallet_mgr import WalletManager
 from os.path import expanduser
 import csv
 from contact import Contact

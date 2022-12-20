@@ -40,7 +40,7 @@ def main_menu():
     print("4. Quit")
     try:
       choice = int(input())
-    except:
+    except ValueError:
       print('Invalid input - try again')
       continue
     if choice >= 1 and choice <= 4:
@@ -124,6 +124,20 @@ def contact_menu():
 
 def tx_menu():
   print("1. Send a transaction")
+  print("2. View past transactions")
+  choice = None
+  try:
+    choice = int(input())
+  except ValueError:
+    print("Invalid input - try again")
+  if choice == 1:
+    print("Pick a contact to send a transaction to")
+    cm.view_list()
+    contact_id = int(input())
+    to_addr = cm.get_contact(contact_id).addr
+    print("How much BTC would you like to send?")
+    print(f"Available balance: X BTC") # TODO: implement
+    # TODO: finish tx
 
 if __name__ == "__main__":
   start()

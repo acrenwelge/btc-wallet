@@ -1,7 +1,16 @@
 # btc-wallet
-
 [![PyPI - Version](https://img.shields.io/pypi/v/btc-wallet.svg)](https://pypi.org/project/btc-wallet)
 [![PyPI - Python Version](https://img.shields.io/pypi/pyversions/btc-wallet.svg)](https://pypi.org/project/btc-wallet)
+
+With this proof-of-concept bitcoin wallet, you can:
+* Generate a mnemonic seed phrase for a new HD wallet
+* Restore an existing HD wallet from seed phrase
+* Store and manage a list of contacts' bitcoin addresses
+* Send bitcoin to your contacts
+
+NOTE: using [QuickNode](https://www.quicknode.com/) for accessing the bitcoin network and reading/writing to the blockchain. This node is setup on TESTNET and will not send transactions on MAINNET.
+
+**THIS APPLICATION IS A PROOF OF CONCEPT - PLEASE DO NOT USE FOR MANAGING REAL BITCOIN ON MAINNET**
 
 -----
 
@@ -21,6 +30,7 @@ pip install btc-wallet
 * [Python-mnemonic](https://github.com/trezor/python-mnemonic)
 * [qrcode](https://pypi.org/project/qrcode/)
 * [pycoin](https://pycoin.readthedocs.io/en/latest/index.html)
+* [QuickNode API Endpoint](https://www.quicknode.com/) (for publishing transactions)
 
 ## License
 
