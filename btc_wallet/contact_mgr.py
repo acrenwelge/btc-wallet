@@ -1,8 +1,8 @@
 from os.path import expanduser
 import csv
-from contact import Contact
+from .contact import Contact
 
-class ContactManager():
+class ContactManager:
   def __init__(self) -> None:
     self.contacts = []
     try:

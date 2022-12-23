@@ -1,18 +1,18 @@
-from wallet_mgr import WalletManager
-from contact_mgr import ContactManager
-from contact import Contact
+from .wallet_mgr import WalletManager
+from .contact_mgr import ContactManager
+from .contact import Contact
+from .util import *
 import subprocess
 import qrcode
 from shutil import which
-from util import *
 
-def start():
+def start(mode="test"):
   print("BTC Wallet app starting...")
   if login():
     print("Password confirmed")
     # init wallet
     global wm, cm
-    wm = WalletManager()
+    wm = WalletManager(mode)
     cm = ContactManager()
     main_menu()
   else:
@@ -70,6 +70,7 @@ def wallet_menu():
     if choice == 1:
       addr = wm.get_addr()
       print(addr)
+      show_qr(addr)
     elif choice == 2:
       print("Enter your 12 or 24 words:")
       words = input()
@@ -113,14 +114,17 @@ def contact_menu():
       print(f"Name: {contact.name}")
       print(f"Bitcoin address (text): {contact.addr}")
       print("Bitcoin address (QR code):")
-      # Display in console if 'qr' command installed, otherwise open file viewer
-      if which('qr') is not None:
-        subprocess.call(['qr', contact.addr])
-      else:
-        qrcode.make(contact.addr).show()
+      show_qr(contact.addr)
     elif choice == 4:
       break
   main_menu()
+
+def show_qr(addr):
+  # Display in console if 'qr' command installed, otherwise open file viewer
+  if which('qr') is not None:
+    subprocess.call(['qr', addr])
+  else:
+    qrcode.make(addr).show()
 
 def tx_menu():
   print("1. Send a transaction")
@@ -138,6 +142,3 @@ def tx_menu():
     print("How much BTC would you like to send?")
     print(f"Available balance: X BTC") # TODO: implement
     # TODO: finish tx
-
-if __name__ == "__main__":
-  start()

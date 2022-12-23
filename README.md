@@ -25,12 +25,17 @@ NOTE: using [QuickNode](https://www.quicknode.com/) for accessing the bitcoin ne
 pip install btc-wallet
 ```
 
+## Run Locally
+
+```console
+cd btc-wallet
+python start.py
+```
+
 ## Built With
 * [Hatch](https://hatch.pypa.io/latest/)
 * [Python-mnemonic](https://github.com/trezor/python-mnemonic)
 * [qrcode](https://pypi.org/project/qrcode/)
-* [pycoin](https://pycoin.readthedocs.io/en/latest/index.html)
-* [QuickNode API Endpoint](https://www.quicknode.com/) (for publishing transactions)
 
 ## License
 

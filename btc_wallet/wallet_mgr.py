@@ -1,10 +1,10 @@
 from mnemonic import Mnemonic
 from bip32 import BIP32, HARDENED_INDEX
-from pycoin.symbols.btc import network
+from bit import Key
 from os.path import expanduser, dirname
 from os import makedirs
 
-class WalletManager():
+class WalletManager:
   seedfile = expanduser('~/.wallet/seed.txt')
 
   def __init__(self):
@@ -18,9 +18,16 @@ class WalletManager():
       print("No existing wallet found - you will need to generate a new one or recover from a seed phrase")
   
   def get_addr(self):
-    xprv = self.wallet.get_xpriv_from_path([HARDENED_INDEX,1])
-    key = network.parse.bip32(xprv)
-    return key.address()
+    xprv = self.wallet.get_privkey_from_path([HARDENED_INDEX,1])
+    key = Key.from_hex(xprv.hex())
+    return key.address
+
+  def get_wif(self):
+    return self.get_prvkey().to_wif()
+
+  def get_prvkey(self) -> Key:
+    xprv = self.wallet.get_privkey_from_path([HARDENED_INDEX,1])
+    return Key.from_hex(xprv.hex())
 
   def recover(self, words, passphrase):
     mnemo = Mnemonic("english")

@@ -1,9 +1,8 @@
-from pycoin.symbols.btc import network
-from pycoin.coins.tx_utils import create_signed_tx
+from bit import Key
 
-class TxManager():
-  def __init__(self):
-    pass
+class TxManager:
+  def __init__(self, wm):
+    self.wm = wm
 
   def send_btc(source_addr, to_addr, amount):
-    create_signed_tx()
+    pass
