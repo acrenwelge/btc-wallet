@@ -1,4 +1,5 @@
 from .validate import Validation
+from enum import Enum
 
 # note: testnest addresses are not valid using this library
 def btc_addr_is_valid(addr):
@@ -6,3 +7,7 @@ def btc_addr_is_valid(addr):
     return Validation.is_btc_address(addr)
   except ValueError:
     return False
+
+class Modes(Enum):
+  TEST="test"
+  PROD="prod"

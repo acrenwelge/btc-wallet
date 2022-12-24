@@ -1,12 +1,18 @@
 from os.path import expanduser
 import csv
+from btc_wallet.util import Modes
 from .contact import Contact
 
 class ContactManager:
-  def __init__(self) -> None:
+  def __init__(self, mode: Modes) -> None:
     self.contacts = []
+    filepath = "~/.wallet/"
+    if mode == Modes.PROD:
+      filepath += "contacts.csv"
+    elif mode == Modes.TEST:
+      filepath += "testcontacts.csv"
     try:
-      with open(expanduser("~/.wallet/contacts.csv")) as f:
+      with open(expanduser(filepath)) as f:
         reader = csv.reader(f)
         for row in reader:
           contact = Contact(row[0],row[1])

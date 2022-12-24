@@ -1,19 +1,20 @@
+from argparse import Namespace
 from .wallet_mgr import WalletManager
 from .contact_mgr import ContactManager
 from .contact import Contact
-from .util import *
+from .util import btc_addr_is_valid
 import subprocess
 import qrcode
 from shutil import which
 
-def start(mode="test"):
-  print("BTC Wallet app starting...")
+def start(args: Namespace):
+  print(f"BTC Wallet app starting in {args.mode.value} mode...")
   if login():
     print("Password confirmed")
     # init wallet
     global wm, cm
-    wm = WalletManager(mode)
-    cm = ContactManager()
+    wm = WalletManager(args.mode)
+    cm = ContactManager(args.mode)
     main_menu()
   else:
     quit()
