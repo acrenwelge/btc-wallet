@@ -14,3 +14,4 @@ Completed:
   * View contacts + addresses
   * Add new contacts
 * View QR code for btc addresses
+* TEST vs PROD modes for testnet vs mainnet

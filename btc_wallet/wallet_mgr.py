@@ -30,17 +30,20 @@ class WalletManager:
   def get_addr(self):
     return self.get_prvkey().address
 
+  def get_bal(self):
+    return self.get_prvkey().get_balance()
+
   def get_wif(self):
     return self.get_prvkey().to_wif()
 
   def get_prvkey(self) -> Key | PrivateKeyTestnet:
     if not self.has_wallet():
       return None
-    xprv = self.hdwallet.get_privkey_from_path([HARDENED_INDEX,self.keyidx])
+    prvkey = self.hdwallet.get_privkey_from_path([HARDENED_INDEX,self.keyidx])
     if self.mode == Modes.PROD:
-      return Key.from_hex(xprv.hex())
+      return Key.from_hex(prvkey.hex())
     elif self.mode == Modes.TEST:
-      return PrivateKeyTestnet.from_hex(xprv.hex())
+      return PrivateKeyTestnet.from_hex(prvkey.hex())
 
   def recover(self, words, passphrase):
     if self.has_wallet():
