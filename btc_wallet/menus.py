@@ -1,6 +1,7 @@
 from argparse import Namespace
 from .wallet_mgr import WalletManager
 from .contact_mgr import ContactManager
+from .user_service import UserService
 from .contact import Contact
 from .util import btc_addr_is_valid, Modes
 import subprocess
@@ -11,6 +12,8 @@ MENU_ERR_MSG = 'Invalid input - try again'
 
 def start(args: Namespace):
   print(f"BTC Wallet app starting in {args.mode.value} mode...")
+  global us
+  us = UserService()
   if login():
     print("Password confirmed")
     # init wallet
@@ -23,14 +26,14 @@ def start(args: Namespace):
 
 def login():
   tries = 3
-  while tries > 0:
+  while tries >= 0:
     print("Login with your password:")
     pw = input()
-    if pw != "btc":
+    if us.validate_password(pw):
+      return True
+    else:
       print(f"ERROR: incorrect password. {tries} more tries remaining")
       tries -= 1
-    else:
-      return True
   return False
 
 def main_menu(mode):
@@ -41,13 +44,14 @@ def main_menu(mode):
     print("2. View / manage contact list")
     print("3. View bitcoin transactions")
     print("4. Send bitcoin")
-    print("5. Quit")
+    print("5. Change app password")
+    print("6. Quit")
     try:
       choice = int(input())
     except ValueError:
       print(MENU_ERR_MSG)
       continue
-    if choice < 1 or choice > 5:
+    if choice < 1 or choice > 6:
       print("Error: Select an option...")
       continue
     if choice == 1:
@@ -61,6 +65,11 @@ def main_menu(mode):
     elif choice == 4:
       tx_send_menu()
     elif choice == 5:
+      print(f"Your current password is: {us.get_pw_from_file()}")
+      newpw = input(f"Enter a new password: \n")
+      us.save_pw(newpw)
+      print(f"New password saved: {newpw}")
+    elif choice == 6:
       break
 
 def wallet_menu():

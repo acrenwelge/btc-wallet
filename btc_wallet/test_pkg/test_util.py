@@ -1,5 +1,5 @@
 import unittest
-from btc_wallet.util import btc_addr_is_valid
+from btc_wallet.util import btc_addr_is_valid, Modes
 from btc_wallet.contact_mgr import ContactManager
 
 class UtilTest(unittest.TestCase):
@@ -21,7 +21,7 @@ class UtilTest(unittest.TestCase):
       self.assertTrue(res)
 
   def test_validate_false(self):
-    self.assertFalse(btc_addr_is_valid('1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNb'))
+    self.assertFalse(btc_addr_is_valid('1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNb', Modes.PROD))
 
 if __name__ == '__main__':
     unittest.main()

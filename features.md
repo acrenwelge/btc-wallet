@@ -1,6 +1,5 @@
 Ideas:
-* Send BTC
-* BTC balance (UTXO total)
+* Encrypt wallet files containing wallet seed
 
 In progress:
 * BTC address verification (any time a btc address is input)
@@ -15,3 +14,7 @@ Completed:
   * Add new contacts
 * View QR code for btc addresses
 * TEST vs PROD modes for testnet vs mainnet
+* See BTC balance
+* Send BTC
+* Read user password from environment
+* Change app password
