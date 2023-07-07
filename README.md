@@ -3,6 +3,7 @@
 [![PyPI - Python Version](https://img.shields.io/pypi/pyversions/btc-wallet.svg)](https://pypi.org/project/btc-wallet)
 
 With this proof-of-concept bitcoin wallet, you can:
+
 * Generate a mnemonic seed phrase for a new HD wallet
 * Restore an existing HD wallet from seed phrase
 * Store and manage a list of contacts' bitcoin addresses
@@ -31,6 +32,10 @@ pip install btc-wallet
 cd btc-wallet
 python start.py
 ```
+
+## Standards Compliance
+* [BIP-39](https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki)
+* [BIP-32](https://github.com/bitcoin/bips/blob/master/bip-0032.mediawiki)
 
 ## Built With
 * [Hatch](https://hatch.pypa.io/latest/)

@@ -1,6 +1,7 @@
-from typing import List, Union
+from dataclasses import dataclass, field
 
+@dataclass
 class Contact:
-  def __init__(self, name: str, addr: str):
-    self.name = name
-    self.addr = addr
+  id: int
+  name: str
+  addr: str

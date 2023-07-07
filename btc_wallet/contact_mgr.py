@@ -1,11 +1,13 @@
 from os.path import expanduser
 import csv
+from typing import List
 from btc_wallet.util import Modes
-from .contact import Contact
+from btc_wallet.contact import Contact
+from prettytable import PrettyTable
 
 class ContactManager:
   def __init__(self, mode: Modes) -> None:
-    self.contacts = []
+    self.contacts: List[Contact] = []
     self.filepath = "~/.wallet/"
     if mode == Modes.PROD:
       self.filepath += "contacts.csv"
@@ -15,7 +17,7 @@ class ContactManager:
       with open(expanduser(self.filepath)) as f:
         reader = csv.reader(f)
         for row in reader:
-          contact = Contact(row[0],row[1])
+          contact = Contact(int(row[0]),row[1],row[2])
           self.contacts.append(contact)
     except FileNotFoundError:
       print("No contacts found")
@@ -24,12 +26,14 @@ class ContactManager:
     if len(self.contacts) == 0:
       print("No contacts to list")
     idx = 0
+    table = PrettyTable()
+    table.field_names = ['#', 'Name', 'BTC Address']
     for contact in self.contacts:
-      print(str(idx) + ') ' + contact.name)
-      print(contact.addr)
+      table.add_row([contact.id, contact.name, contact.addr])
       idx += 1
+    print(table)
 
-  def add_contact(self, new_contact):
+  def add_contact(self, new_contact: Contact):
     self.contacts.append(new_contact)
 
   def persist_new_contact(self, new_contact: Contact):
@@ -42,4 +46,6 @@ class ContactManager:
       print("Contact not saved - something went wrong")
 
   def get_contact(self, id: int) -> Contact:
-    return self.contacts[id-1]
+    for contact in self.contacts:
+      if contact.id == id:
+        return contact

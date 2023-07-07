@@ -4,6 +4,9 @@ Ideas:
 In progress:
 * BTC address verification (any time a btc address is input)
 
+Bugs:
+* Fix off by one error in contact selection
+
 Completed:
 * Login
 * Recover from seed phrase backup

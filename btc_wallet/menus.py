@@ -2,11 +2,14 @@ from argparse import Namespace
 from .wallet_mgr import WalletManager
 from .contact_mgr import ContactManager
 from .user_service import UserService
+from .tx_service import TxService
 from .contact import Contact
-from .util import btc_addr_is_valid, Modes
+from .util import btc_addr_is_valid, Modes, sats_to_btc, SATS_PER_BTC
 import subprocess
 import qrcode
 from shutil import which
+from prettytable import PrettyTable
+import getpass
 
 MENU_ERR_MSG = 'Invalid input - try again'
 
@@ -17,9 +20,10 @@ def start(args: Namespace):
   if login():
     print("Password confirmed")
     # init wallet
-    global wm, cm
+    global wm, cm, txservice
     wm = WalletManager(args.mode)
     cm = ContactManager(args.mode)
+    txservice = TxService(args.mode)
     main_menu(args.mode)
   else:
     quit()
@@ -27,8 +31,7 @@ def start(args: Namespace):
 def login():
   tries = 3
   while tries >= 0:
-    print("Login with your password:")
-    pw = input()
+    pw = getpass.getpass()
     if us.validate_password(pw):
       return True
     else:
@@ -39,15 +42,20 @@ def login():
 def main_menu(mode):
   choice = None
   while True:
-    print("Choose an option:")
-    print("1. View / manage bitcoin wallet")
-    print("2. View / manage contact list")
-    print("3. View bitcoin transactions")
-    print("4. Send bitcoin")
-    print("5. Change app password")
-    print("6. Quit")
+    print("""
+**********************
+      MAIN MENU
+**********************
+1. View / manage bitcoin wallet
+2. View / manage contact list
+3. View bitcoin transactions
+4. Send bitcoin
+5. Change app password
+6. Quit
+""")
     try:
-      choice = int(input())
+      choice = int(input("Choice: "))
+      print()
     except ValueError:
       print(MENU_ERR_MSG)
       continue
@@ -60,8 +68,7 @@ def main_menu(mode):
       contact_menu(mode)
     elif choice == 3:
       txs = wm.get_prvkey().get_transactions()
-      for tx in txs:
-        print(tx)
+      print_txs(txs)
     elif choice == 4:
       tx_send_menu()
     elif choice == 5:
@@ -72,13 +79,26 @@ def main_menu(mode):
     elif choice == 6:
       break
 
+def print_txs(txs):
+  table = PrettyTable()
+  table.field_names = ["Transaction ID", "Amount", "Fee", "Confirmed", "Block Height"]
+  for tx in txs:
+    tinfo = txservice.get_tx(tx)
+    table.add_row([tinfo.txid, tinfo.amount, tinfo.fee, tinfo.confirmed, tinfo.block_height])
+  print(table)
+
 def wallet_menu():
   while True:
-    print("Choose an option:")
-    print("1. Show bitcoin address")
-    print("2. Recover bitcoin wallet")
-    print("3. Generate new wallet")
-    print("4. Back to main menu")
+    print("""
+**********************
+     WALLET MENU
+**********************
+Choose an option:
+1. Show bitcoin address
+2. Recover bitcoin wallet
+3. Generate new wallet
+4. Back to main menu
+    """)
     choice = None
     try:
       choice = int(input())
@@ -89,8 +109,11 @@ def wallet_menu():
       addr = wm.get_addr()
       print(addr)
       show_qr(addr)
-      bal = wm.get_bal()
-      print(f"Balance (BTC): {bal}")
+      bal = int(wm.get_bal())
+      if bal < (SATS_PER_BTC / 1000): # display as sats if < 0.001 btc
+        print(f"Balance: {bal} sats")
+      else: # display as btc if > 0.001 btc
+        print(f"Balance: {sats_to_btc(bal):,.8f} btc")
     elif choice == 2:
       print("Enter your 12 or 24 words:")
       words = input()
@@ -104,10 +127,15 @@ def wallet_menu():
 
 def contact_menu(mode):
   while True:
-    print("1. View Contact List")
-    print("2. Add new contact")
-    print("3. Get individual contact")
-    print("4. Back to main menu")
+    print("""
+**********************
+    CONTACT MENU
+**********************
+1. View Contact List
+2. Add new contact
+3. Get individual contact
+4. Back to main menu
+""")
     choice = None
     try:
       choice = int(input())
@@ -127,13 +155,15 @@ def contact_menu(mode):
       else:
         print('Invalid address - contact not added. Try again')
     elif choice == 3:
-      print('Enter the contact ID number to retrieve:')
-      contact_id = int(input())
+      contact_id = int(input('Enter the contact ID number to retrieve: '))
       contact = cm.get_contact(contact_id)
-      print(f"Name: {contact.name}")
-      print(f"Bitcoin address (text): {contact.addr}")
-      print("Bitcoin address (QR code):")
-      show_qr(contact.addr)
+      if contact is None:
+        print('Contact not found. Enter a valid contact ID')
+      else:
+        print(f"Name: {contact.name}")
+        print(f"Bitcoin address (text): {contact.addr}")
+        print("Bitcoin address (QR code):")
+        show_qr(contact.addr)
     elif choice == 4:
       break
 

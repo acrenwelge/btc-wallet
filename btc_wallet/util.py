@@ -15,3 +15,8 @@ def btc_addr_is_valid(addr, mode: Modes):
   else:
     # TODO: implement testnet validation
     return True
+
+SATS_PER_BTC = 100_000_000
+
+def sats_to_btc(sats: int):
+  return sats / SATS_PER_BTC
