@@ -2,10 +2,12 @@ Total time: 20 min
 
 ## Intro ~ 2 min
 
-1. Introduce myself
-2. What is Bitcoin?
-3. What is a software wallet?
-4. Decided late last year to make a proof of concept wallet after reading "Programming Bitcoin" book by Jimmy Song
+1. Introduce myself (note: emphasize this is just a personal project)
+2. Explain why I started this project
+  - Learn Python, apply learnings from bitcoin book
+  - This is a proof-of-concept bitcoin wallet
+3. What is Bitcoin?
+  - What is a software wallet?
 
 ## Demo ~ 15 min 
 
@@ -18,9 +20,10 @@ Total time: 20 min
 7. Send bitcoin to a contact
 8. View updated transactions
 9. View updated wallet info + balance
-10. New terminal - generate new wallet, get seed phrase
-11. Explain mnemonic seed phrase and "deterministic" wallets
-12. Restore wallet from seed phrase
+10. Open new terminal - explain mnemonic phrase and how binary seed can be derived from it
+11. Delete `~/.wallet/testphrase.txt` and `~/.wallet/testseed.txt` (save a copy of the seed file)
+11. Generate new wallet and show balance is 0 *Note: restart the program after deleting seed files*
+12. Restore wallet from old seed phrase and show balance is restored
 
 ## Questions ~ 3 min
 1. Explain - using file persistance for storing wallet/contact data

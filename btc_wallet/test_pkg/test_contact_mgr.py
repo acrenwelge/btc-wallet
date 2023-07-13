@@ -9,12 +9,12 @@ class ContactManagerTest(unittest.TestCase):
 
   def test_add_contact_testmode(self):
     initsize = len(self.cmgr_test.contacts)
-    self.cmgr_test.add_contact(Contact('abc','1btcaddr'))
+    self.cmgr_test.add_contact(Contact(initsize+1,'abc','1btcaddr'))
     self.assertEqual(initsize+1, len(self.cmgr_test.contacts))
 
   def test_add_contact_prodmode(self):
     initsize = len(self.cmgr_prod.contacts)
-    self.cmgr_prod.add_contact(Contact('abc','1btcaddr'))
+    self.cmgr_prod.add_contact(Contact(initsize+1,'abc','1btcaddr'))
     self.assertEqual(initsize+1, len(self.cmgr_prod.contacts))
 
   def test_get_contact_testmode(self):

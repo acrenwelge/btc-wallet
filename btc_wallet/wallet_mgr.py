@@ -12,7 +12,7 @@ class WalletManager:
     testseedfile = expanduser('~/.wallet/testseed.txt')
     self.mode = mode
     self.seedfile = None
-    self.hdwallet, self.keyidx = [None, None]
+    self.hdwallet, self.keyidx = None, 1
     if mode == Modes.PROD:
       self.seedfile = prodseedfile
     elif mode == Modes.TEST:
@@ -22,10 +22,14 @@ class WalletManager:
         seed = file.read()
         # Create the HD wallet (BIP-32)
         self.hdwallet = BIP32.from_seed(seed)
-        self.keyidx = 1
     except FileNotFoundError:
       makedirs(dirname(self.seedfile), exist_ok=True)
-      print("No existing wallet found - you will need to generate a new one or recover from a seed phrase")
+      print("""
+*******************************************************************************
+WARNING: No existing wallet found - you will need to generate a new one or
+recover from a seed phrase
+*******************************************************************************
+""")
   
   def get_addr(self):
     return self.get_prvkey().address
@@ -47,20 +51,29 @@ class WalletManager:
 
   def recover(self, words, passphrase):
     if self.has_wallet():
-      print("ERROR: wallet already exists, cannot recover new wallet")
+      print("""
+*******************************************************************************
+ERROR: wallet already exists, cannot recover new wallet
+*******************************************************************************
+""")
       return
     mnemo = Mnemonic("english")
     bin_seed = mnemo.to_seed(words, passphrase=passphrase)
     with open(self.seedfile,'wb+') as file:
       file.write(bin_seed)
     self.hdwallet = BIP32.from_seed(bin_seed)
+    print("Wallet recovered!")
 
   def has_wallet(self):
     return self.hdwallet is not None
 
   def generate(self):
     if self.has_wallet():
-      print("ERROR: wallet already exists, cannot generate new wallet")
+      print("""
+*******************************************************************************
+ERROR: wallet already exists, cannot generate new wallet
+*******************************************************************************
+""")
       return
     # Generate seed, passphrase optional (BIP-39)
     yn = input("Would you like to include a passphrase for your wallet? (y/n)")
@@ -79,10 +92,14 @@ class WalletManager:
     readable_entr = ''.join('{:02x}'.format(x) for x in entropy_byte_arr)
 
     print(
-"""Your wallet has been generated!
+"""
+*******************************************************************************
+Your wallet has been generated!
 INSTRUCTIONS: WRITE DOWN THE FOLLOWING WORDS TO BACKUP YOUR WALLET AND STORE IN A SAFE AND SECURE OFFLINE LOCATION.
 THIS BACKUP PHRASE WILL NOT BE SAVED ANYWHERE ON THIS DEVICE. FAILURE TO SECURE THIS BACKUP SEED PHRASE MAY CAUSE YOU TO LOSE YOUR BITCOIN.
-DO NOT FORGET THESE!""")
+DO NOT FORGET THESE!
+*******************************************************************************
+""")
     print("*" * 20)
     print(words)
     print("*" * 20)

@@ -23,7 +23,11 @@ classifiers = [
   "Programming Language :: Python :: Implementation :: CPython",
   "Programming Language :: Python :: Implementation :: PyPy",
 ]
-dependencies = []
+dependencies = [
+  "bit>=0.8.0",
+  "mnemonic>=0.20",
+  "qrcode>=7.3",
+]
 dynamic = ["version"]
 
 [project.urls]

@@ -119,7 +119,6 @@ Choose an option:
       words = input()
       passphr = input("Enter your passphrase (if there is none, leave blank):")
       wm.recover(words,passphr)
-      print("Recovery complete")
     elif choice == 3:
       wm.generate()
     elif choice == 4:
