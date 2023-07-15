@@ -27,6 +27,7 @@ dependencies = [
   "bit>=0.8.0",
   "mnemonic>=0.20",
   "qrcode>=7.3",
+  "blessings>=1.7",
 ]
 dynamic = ["version"]
 

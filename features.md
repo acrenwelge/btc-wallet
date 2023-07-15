@@ -1,11 +1,13 @@
-Ideas:
+Feature ideas:
 * Encrypt wallet files containing wallet seed
+* Delete contacts
+* Update contacts
+* Improve terminal UI (e.g. use blessings, pytermgui)
 
 In progress:
 * BTC address verification (any time a btc address is input)
 
-Bugs:
-* Fix off by one error in contact selection
+Bugs to fix:
 
 Completed:
 * Login
@@ -21,3 +23,6 @@ Completed:
 * Send BTC
 * Read user password from environment
 * Change app password
+
+Bugs fixed:
+✅ Fix off by one error in contact selection

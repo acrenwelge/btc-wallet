@@ -19,6 +19,7 @@ class ContactManager:
         for row in reader:
           contact = Contact(int(row[0]),row[1],row[2])
           self.contacts.append(contact)
+      self.contacts.sort(key=lambda x: x.id)
     except FileNotFoundError:
       print("No contacts found")
 
@@ -40,7 +41,7 @@ class ContactManager:
     try:
       with open(expanduser(self.filepath),'a') as f:
         writer = csv.writer(f)
-        writer.writerow([new_contact.name, new_contact.addr])
+        writer.writerow([new_contact.id, new_contact.name, new_contact.addr])
         self.add_contact(new_contact)
     except IOError:
       print("Contact not saved - something went wrong")

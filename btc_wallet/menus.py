@@ -10,6 +10,7 @@ import qrcode
 from shutil import which
 from prettytable import PrettyTable
 import getpass
+from blessings import Terminal # TODO
 
 MENU_ERR_MSG = 'Invalid input - try again'
 
@@ -149,7 +150,8 @@ def contact_menu(mode):
       print("Enter new contact's BTC address:")
       addr = input()
       if (btc_addr_is_valid(addr, mode)):
-        cm.persist_new_contact(Contact(name, addr))
+        newid = cm.contacts[-1].id + 1
+        cm.persist_new_contact(Contact(newid, name, addr))
         print(f'Contact added: {cm}')
       else:
         print('Invalid address - contact not added. Try again')
