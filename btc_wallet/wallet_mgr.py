@@ -4,14 +4,18 @@ from bit import Key, PrivateKeyTestnet
 from os.path import expanduser, dirname
 from os import makedirs
 from .util import Modes
+import logging
 
 class WalletManager:
+
+  hdwallet: BIP32
+  seedfile: str
+  mode: Modes
 
   def __init__(self, mode: Modes):
     prodseedfile = expanduser('~/.wallet/seed.txt')
     testseedfile = expanduser('~/.wallet/testseed.txt')
     self.mode = mode
-    self.seedfile = None
     self.hdwallet, self.keyidx = None, 1
     if mode == Modes.PROD:
       self.seedfile = prodseedfile
@@ -24,6 +28,7 @@ class WalletManager:
         self.hdwallet = BIP32.from_seed(seed)
     except FileNotFoundError:
       makedirs(dirname(self.seedfile), exist_ok=True)
+      logging.warn("No existing wallet found - you will need to generate a new one or recover from a seed phrase")
       print("""
 *******************************************************************************
 WARNING: No existing wallet found - you will need to generate a new one or
@@ -61,8 +66,9 @@ ERROR: wallet already exists, cannot recover new wallet
     bin_seed = mnemo.to_seed(words, passphrase=passphrase)
     with open(self.seedfile,'wb+') as file:
       file.write(bin_seed)
+      logging.info("Binary seed saved to file")
     self.hdwallet = BIP32.from_seed(bin_seed)
-    print("Wallet recovered!")
+    logging.info("Wallet recovered!")
 
   def has_wallet(self):
     return self.hdwallet is not None
@@ -79,17 +85,19 @@ ERROR: wallet already exists, cannot generate new wallet
     yn = input("Would you like to include a passphrase for your wallet? (y/n)")
     passphr = ""
     if yn == 'y':
-      passphr = input(f"Set your passphrase. Make it unique but memorable!\n")
+      passphr = input("Set your passphrase. Make it unique but memorable!\n")
     mnemo = Mnemonic("english")
     words = mnemo.generate(strength=128)
     bin_seed = mnemo.to_seed(words, passphrase=passphr)
     # save to hidden file
     with open(self.seedfile,'wb+') as file:
       file.write(bin_seed)
+      logging.info("Binary seed saved to file")
     self.hdwallet = BIP32.from_seed(bin_seed)
     # entropy data
     entropy_byte_arr = mnemo.to_entropy(words)
     readable_entr = ''.join('{:02x}'.format(x) for x in entropy_byte_arr)
+    logging.info("Wallet generated")
 
     print(
 """

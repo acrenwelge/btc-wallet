@@ -3,6 +3,7 @@ Feature ideas:
 * Delete contacts
 * Update contacts
 * Improve terminal UI (e.g. use blessings, pytermgui)
+* Use a different address per transaction (following BIP 32)
 
 In progress:
 * BTC address verification (any time a btc address is input)
@@ -25,4 +26,4 @@ Completed:
 * Change app password
 
 Bugs fixed:
-✅ Fix off by one error in contact selection
+✅ Off by one error in contact selection

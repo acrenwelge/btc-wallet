@@ -1,11 +1,30 @@
-import btc_wallet.menus
-import argparse
+import logging
+from argparse import ArgumentParser
+from btc_wallet.menus import start
 from btc_wallet.util import Modes
 
-if __name__ == "__main__":
-  parser = argparse.ArgumentParser()
-  parser.add_argument("--mode", metavar='m',type=Modes,default="prod",help="Specify 'test' or 'prod' mode")
+def setup_logging():
+  logging.basicConfig(level=logging.DEBUG,
+                    format='%(asctime)s - %(levelname)s - %(message)s',
+                    handlers=[
+                      logging.StreamHandler(),  # Console handler
+                      logging.FileHandler('wallet.log')
+                    ])
+  console_handler = logging.getLogger().handlers[0]
+  console_handler.setLevel(logging.INFO)
+  console_formatter = logging.Formatter('%(message)s')
+  console_handler.setFormatter(console_formatter)   
+
+def main():
+  setup_logging()
+  logging.debug('Starting up')
+  parser = ArgumentParser()
+  parser.add_argument("--mode","-m", type=Modes, default="test", help="Specify 'test' or 'prod' mode")
   args = parser.parse_args()
-  if args.mode != Modes.PROD and args.mode != Modes.TEST:
+  logging.debug(f"Arguments parsed: {args}")
+  if args.mode not in [Modes.PROD, Modes.TEST]:
     raise ValueError('Mode must be either "test" or "prod"')
-  btc_wallet.menus.start(args)
+  start(args) 
+
+if __name__ == "__main__":
+    main()

@@ -9,8 +9,6 @@ With this proof-of-concept bitcoin wallet, you can:
 * Store and manage a list of contacts' bitcoin addresses
 * Send bitcoin to your contacts
 
-NOTE: using [QuickNode](https://www.quicknode.com/) for accessing the bitcoin network and reading/writing to the blockchain. This node is setup on TESTNET and will not send transactions on MAINNET.
-
 **THIS APPLICATION IS A PROOF OF CONCEPT - PLEASE DO NOT USE FOR MANAGING REAL BITCOIN ON MAINNET**
 
 -----
@@ -30,7 +28,8 @@ pip install btc-wallet
 
 ```console
 cd btc-wallet
-python start.py
+pipx install hatch
+hatch run python start.py
 ```
 
 ## Standards Compliance
@@ -39,8 +38,10 @@ python start.py
 
 ## Built With
 * [Hatch](https://hatch.pypa.io/latest/)
+* [bit](https://pypi.org/project/bit/)
 * [Python-mnemonic](https://github.com/trezor/python-mnemonic)
 * [qrcode](https://pypi.org/project/qrcode/)
+* [Blockstream API](https://github.com/Blockstream/esplora/blob/master/API.md#transaction-format)
 
 ## License
 

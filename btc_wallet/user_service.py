@@ -1,4 +1,5 @@
 from os.path import expanduser
+import logging
 
 class UserService:
 
@@ -18,3 +19,4 @@ class UserService:
   def save_pw(self, newpw: str):
     with open(self.filepath, 'w') as f:
       f.write(newpw)
+      logging.info("Password updated")

@@ -12,17 +12,16 @@ Total time: 20 min
 ## Demo ~ 15 min 
 
 1. Run in test mode - explain testnet vs mainnet
-2. View wallet info + balance
-3. View transactions
-4. Get testnet bitcoin from faucet
-5. View updated balance + transactions
-6. View contacts (explain public key vs private key)
-7. Send bitcoin to a contact
-8. View updated transactions
+2. Generate new wallet
+3. Record recovery phrase - explain how this is used to generate a binary seed, portability via BIP39
+4. View wallet info + balance
+5. Get testnet bitcoin from faucet
+6. View updated balance + transactions
+7. View contacts (explain public key vs private key), add testnet faucet as a contact
+8. Send bitcoin back to faucet
 9. View updated wallet info + balance
-10. Open new terminal - explain mnemonic phrase and how binary seed can be derived from it
-11. Delete `~/.wallet/testphrase.txt` and `~/.wallet/testseed.txt` (save a copy of the seed file)
-11. Generate new wallet and show balance is 0 *Note: restart the program after deleting seed files*
+10. Delete `~/.wallet/testseed.txt` and copy recovery phrase from step 3
+11. Restart the program and show that the wallet is empty
 12. Restore wallet from old seed phrase and show balance is restored
 
 ## Questions ~ 3 min
