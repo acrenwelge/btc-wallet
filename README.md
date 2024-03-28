@@ -1,4 +1,5 @@
 # btc-wallet
+
 [![PyPI - Version](https://img.shields.io/pypi/v/btc-wallet.svg)](https://pypi.org/project/btc-wallet)
 [![PyPI - Python Version](https://img.shields.io/pypi/pyversions/btc-wallet.svg)](https://pypi.org/project/btc-wallet)
 
@@ -13,7 +14,7 @@ With this proof-of-concept bitcoin wallet, you can:
 
 -----
 
-**Table of Contents**
+## Table of Contents
 
 - [Installation](#installation)
 - [License](#license)
@@ -33,10 +34,12 @@ hatch run python start.py
 ```
 
 ## Standards Compliance
+
 * [BIP-39](https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki)
 * [BIP-32](https://github.com/bitcoin/bips/blob/master/bip-0032.mediawiki)
 
 ## Built With
+
 * [Hatch](https://hatch.pypa.io/latest/)
 * [bit](https://pypi.org/project/bit/)
 * [Python-mnemonic](https://github.com/trezor/python-mnemonic)

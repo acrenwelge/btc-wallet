@@ -2,7 +2,6 @@
 # Edit at https://www.toptal.com/developers/gitignore?templates=python
 
 # Custom
-test-addresses.txt
 testnet-endpoint.txt
 .DS_Store
 
