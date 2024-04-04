@@ -34,14 +34,14 @@ class ContactManager:
         except FileNotFoundError:
             logging.error("Contact file not found")
 
-    def view_list(self):
+    def get_list(self):
         if len(self.contacts) == 0:
-            logging.error("No contacts to list")
+            return None
         table = PrettyTable()
         table.field_names = ["#", "Name", "BTC Address"]
         for contact in self.contacts:
             table.add_row([contact.id, contact.name, contact.addr])
-        print(table)
+        return table
 
     def add_contact(self, new_contact: Contact):
         self.contacts.append(new_contact)
@@ -78,8 +78,9 @@ class ContactManager:
                 self.contacts.remove(contact)
                 self.save_contacts_to_file()
                 logging.info(f"Contact deleted: {contact}")
-                return
+                return True
         logging.warn(f"Contact not found: {id}")
+        return False
 
     def get_contact(self, id: int) -> Contact:
         for contact in self.contacts:

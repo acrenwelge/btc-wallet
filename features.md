@@ -3,10 +3,25 @@
 ## Ideas
 
 * Encrypt wallet files containing wallet seed
-* Improve terminal UI (e.g. use blessings, pytermgui)
 * Use a different address per transaction (following BIP 32)
+* Timeout - logout user after a certain amount of time
+* Implement multi-signature wallets for added security
+* Integrate with hardware wallets
+* Implement a notification system for transaction confirmations
+* Add a feature to estimate transaction fees
+* Implement a backup system for the wallet
+* Add a feature to import/export private keys
+* Add a feature to set custom transaction fees (make this configurable by the user)
+* Implement a light/dark mode for the UI
+* Add a feature to show the current cryptocurrency market rates (could use my other project)
+* Implement a feature to schedule recurring transactions
+* Add a feature to export transaction history
+* Implement a privacy mode that hides balance and transaction amounts
+* Add a feature to automatically update the wallet software.
 
 In progress:
+
+* Make a terminal UI using blessed
 
 Bugs to fix:
 
@@ -21,6 +36,7 @@ Completed:
   * Add new contacts
 * View QR code for btc addresses
 * TEST vs PROD modes for testnet vs mainnet
+* View transaction history
 * See BTC balance
 * Send BTC
 * Read user password from environment

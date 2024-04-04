@@ -3,6 +3,7 @@ import logging
 import subprocess
 from argparse import Namespace
 from shutil import which
+from typing import Callable, List, Tuple
 
 import qrcode
 from bit.exceptions import InsufficientFunds
@@ -13,25 +14,33 @@ from .contact import Contact
 from .contact_mgr import ContactManager
 from .tx_service import TxService
 from .user_service import UserService
-from .util import SATS_PER_BTC, Modes, btc_addr_is_valid, sats_to_btc
-from .wallet_mgr import WalletManager
+from .util import (
+    SATS_PER_BTC,
+    Modes,
+    btc_addr_is_valid,
+    get_user_input,
+    press_any_key_to_return,
+    sats_to_btc,
+)
+from .wallet_mgr import WalletAlreadyExistsError, WalletManager
 
 MENU_ERR_MSG = "Invalid input - try again"
 t = Terminal()
 
 
 def start(args: Namespace):
-    logging.info(f"Starting app in {args.mode.value} mode...")
-    global user_service
+    global mode, user_service
+    mode = args.mode
+    logging.info(f"Starting app in {mode.value} mode...")
     user_service = UserService()
     if login():
         logging.info("Password confirmed")
         # init wallet
         global wm, cm, tx_service
-        wm = WalletManager(args.mode)
-        cm = ContactManager(args.mode)
-        tx_service = TxService(args.mode)
-        main_menu(args.mode)
+        wm = WalletManager(mode)
+        cm = ContactManager(mode)
+        tx_service = TxService(mode)
+        main_menu()
     else:
         logging.info("Password incorrect - quitting")
         quit()
@@ -49,52 +58,89 @@ def login():
     return False
 
 
-def main_menu(mode):
-    choice = None
-    while True:
+def main_menu():
+    def view_txs():
+        txs = wm.get_prvkey().get_transactions()
+        print(t.clear())
+        print_txs(txs)
+
+    def change_pw():
         with t.fullscreen():
+            print(f"Your current password is: {user_service.get_pw_from_file()}")
+            newpw = input("Enter a new password: \n")
+            user_service.save_pw(newpw)
+            logging.info("New password saved")
+            print("Password changed successfully!")
+            press_any_key_to_return(t, "to the main menu")
+
+    menu_options = [
+        ("Bitcoin wallet", wallet_menu),
+        ("Manage contact list", lambda: contact_menu(mode)),
+        ("View bitcoin transactions", view_txs),
+        ("Send bitcoin", tx_send_menu),
+        ("Change app password", change_pw),
+        ("Quit", lambda: None),
+    ]
+    generic_menu(menu_options, "MAIN MENU")
+
+
+"""
+Displays a generic menu with the given options and menu name.
+User selects an option and the corresponding function is called.
+"""
+
+
+def generic_menu(menu_options: List[Tuple[str, Callable]], menu_name) -> int:
+    selected_option_index = 0
+
+    with t.fullscreen(), t.cbreak(), t.hidden_cursor():
+        while True:
+            print(t.clear)
             print("*" * t.width)
             print(
-                t.bold(t.black(t.on_white("MAIN MENU"))).center(t.width)
+                t.bold(
+                    t.black(t.on_white(f"{menu_name}   ({mode.value.upper()} MODE)"))
+                ).center(t.width)
             )  # centering is off...
             print("*" * t.width)
-            print(
-                """
-{t.bold}1.{t.normal} View / manage bitcoin wallet
-{t.bold}2.{t.normal} View / manage contact list
-{t.bold}3.{t.normal} View bitcoin transactions
-{t.bold}4.{t.normal} Send bitcoin
-{t.bold}5.{t.normal} Change app password
-{t.bold}6.{t.normal} {t.red}Quit{t.normal}
-""".format(
-                    t=t
+            if mode == Modes.TEST:
+                print(
+                    t.red(
+                        "WARNING: You are in TESTNET mode. This mode is only for testing and using test bitcoin. Do not enter real bitcoin addresses or send real bitcoin!"
+                    )
                 )
-            )
-            try:
-                choice = int(input("Choice: "))
-                print()
-            except ValueError:
-                logging.error(MENU_ERR_MSG)
-                continue
-            if choice < 1 or choice > 6:
-                logging.error("Error: Select an option...")
-                continue
-            if choice == 1:
-                wallet_menu()
-            elif choice == 2:
-                contact_menu(mode)
-            elif choice == 3:
-                txs = wm.get_prvkey().get_transactions()
-                print_txs(txs)
-            elif choice == 4:
-                tx_send_menu()
-            elif choice == 5:
-                print(f"Your current password is: {user_service.get_pw_from_file()}")
-                newpw = input(f"Enter a new password: \n")
-                user_service.save_pw(newpw)
-                logging.info(f"New password saved: {newpw}")
-            elif choice == 6:
-                break
+            elif mode == Modes.PROD:
+                print(
+                    t.green(
+                        "WARNING: You are in MAINNET mode. Do NOT enter testnet addresses. Be careful with real bitcoin!"
+                    )
+                )
+            for i, option in enumerate(menu_options):
+                if i == selected_option_index:
+                    print(t.bold_reverse(option[0]))  # Highlight the selected option
+                else:
+                    print(option[0])
+
+            with t.location(0, t.height - 1):
+                print("Use arrow keys to navigate, ENTER to select, and Q to quit.")
+
+            key = t.inkey()
+
+            if key.name == "KEY_UP":
+                selected_option_index = max(0, selected_option_index - 1)
+            elif key.name == "KEY_DOWN":
+                selected_option_index = min(
+                    len(menu_options) - 1, selected_option_index + 1
+                )
+            elif key.name == "KEY_ENTER":
+                # execute the function corresponding to the selected option
+                func = menu_options[selected_option_index][1]
+                logging.info(menu_options[selected_option_index][0])
+                func()
+                if selected_option_index == len(menu_options) - 1:
+                    break  # Exit the menu loop if the last option is selected
+            elif key.lower() == "q":
+                quit()
 
 
 def print_txs(txs):
@@ -109,27 +155,11 @@ def print_txs(txs):
 
 
 def wallet_menu():
-    with t.fullscreen():
-        while True:
-            print(
-                """
-**********************
-    WALLET MENU
-**********************
-Choose an option:
-1. Show bitcoin address
-2. Recover bitcoin wallet
-3. Generate new wallet
-4. Back to main menu
-    """
-            )
-            choice = None
-            try:
-                choice = int(input())
-            except ValueError:
-                logging.error(MENU_ERR_MSG)
-                continue
-            if choice == 1:
+    def show_addr():
+        with t.fullscreen():
+            copied = False
+            while True:
+                print(t.clear)
                 addr = wm.get_addr()
                 print(addr)
                 show_qr(addr)
@@ -138,57 +168,124 @@ Choose an option:
                     print(f"Balance: {bal} sats")
                 else:  # display as btc if > 0.001 btc
                     print(f"Balance: {sats_to_btc(bal):,.8f} btc")
-            elif choice == 2:
-                print("Enter your 12 or 24 words:")
-                words = input()
-                passphr = input(
-                    "Enter your passphrase (if there is none, leave blank):"
-                )
+                with t.location(0, t.height - 2):
+                    if copied:
+                        print(t.bold_reverse("Address copied to clipboard!"))
+                    print(
+                        "Press C to copy the address; ENTER to return to wallet menu."
+                    )
+                key = t.inkey()
+                if key.lower() == "c":
+                    import pyperclip
+
+                    pyperclip.copy(addr)
+                    copied = True
+                else:
+                    break
+
+    def recover_wallet():
+        with t.fullscreen(), t.hidden_cursor():
+            words = ""
+            passphr = ""
+            while True:
+                with t.location(0, 1):
+                    print("Enter your 12 or 24 word seed phrase:")
+                    print(words)
+                key = t.inkey()
+                if key.isalnum() or key == " ":
+                    words += key
+                elif key.name == "KEY_BACKSPACE" or key.name == "KEY_DELETE":
+                    words = words[:-1]
+                elif key.name == "KEY_ENTER":
+                    break
+            while True:
+                with t.location(0, 4):
+                    print("Enter your passphrase (if there is none, leave blank):")
+                    print(passphr)
+                key = t.inkey()
+                if key.isalnum() or key == " ":
+                    passphr += key
+                    print(passphr)
+                elif key.name == "KEY_BACKSPACE" or key.name == "KEY_DELETE":
+                    t.get_location()
+                    passphr = passphr[:-1]
+                    print(passphr)
+                elif key.name == "KEY_ENTER":
+                    break
+            if len(words.split()) not in [12, 24]:
+                with t.location(0, 7):
+                    logging.error(
+                        t.bold_reverse(
+                            "Invalid number of words - must be 12 or 24 words"
+                        )
+                    )
+                    print(t.bold_reverse("Hit any key to return to the menu"))
+                    t.inkey()
+                    return
+            try:
                 wm.recover(words, passphr)
-            elif choice == 3:
-                wm.generate()
-            elif choice == 4:
-                break
+            except WalletAlreadyExistsError:
+                with t.location(0, 7):
+                    logging.error(
+                        t.bold_reverse(
+                            "Wallet already exists, cannot recover new wallet"
+                        )
+                    )
+                    print(t.bold_reverse("Hit any key to return to the menu"))
+                    t.inkey()
+
+    def generate_wallet():
+        if wm.has_wallet():
+            with t.location(0, 7):
+                logging.error(
+                    t.bold_reverse("Wallet already exists, cannot generate new wallet")
+                )
+                print(t.bold_reverse("Hit any key to return to the menu"))
+                t.inkey()
+                return
+        wm.generate()
+
+    menu_options = [
+        ("Show bitcoin address", show_addr),
+        ("Recover bitcoin wallet", recover_wallet),
+        ("Generate new wallet", generate_wallet),
+        ("Back to main menu", lambda: None),
+    ]
+    generic_menu(menu_options, "WALLET MENU")
 
 
 def contact_menu(mode):
-    with t.fullscreen():
-        while True:
-            print(
-                """
-**********************
-    CONTACT MENU
-**********************
-1. View Contact List
-2. Add new contact
-3. Get individual contact
-4. Edit contact
-5. Delete contact
-6. Back to main menu
-"""
+    return_str = "to the contact menu"
+
+    def show_contacts():
+        with t.fullscreen():
+            print(t.clear())
+            table = cm.get_list()
+            if table is None:
+                print("No contacts found")
+            else:
+                print(table)
+            press_any_key_to_return(t, return_str)
+
+    def add_contact():
+        with t.fullscreen():
+            name = get_user_input(t, 1, "Enter new contact's name:")
+            addr = get_user_input(t, 3, "Enter new contact's BTC address:")
+            if btc_addr_is_valid(addr, mode):
+                newid = cm.contacts[-1].id + 1
+                cm.persist_new_contact(Contact(newid, name, addr))
+                logging.info(f"Contact added: {cm}")
+            else:
+                logging.warn("Invalid address - contact not added. Try again")
+            press_any_key_to_return(t, return_str)
+
+    def get_contact():
+        with t.fullscreen():
+            contact_id = int(
+                get_user_input(t, 1, "Enter the contact ID number to retrieve: ")
             )
-            choice = None
-            try:
-                choice = int(input())
-            except ValueError:
-                logging.error(MENU_ERR_MSG)
-                continue
-            if choice == 1:
-                cm.view_list()
-            elif choice == 2:
-                print("Enter new contact's name:")
-                name = input()
-                print("Enter new contact's BTC address:")
-                addr = input()
-                if btc_addr_is_valid(addr, mode):
-                    newid = cm.contacts[-1].id + 1
-                    cm.persist_new_contact(Contact(newid, name, addr))
-                    logging.info(f"Contact added: {cm}")
-                else:
-                    logging.warn("Invalid address - contact not added. Try again")
-            elif choice == 3:
-                contact_id = int(input("Enter the contact ID number to retrieve: "))
-                contact = cm.get_contact(contact_id)
+            contact = cm.get_contact(contact_id)
+            with t.location(0, 4):
                 if contact is None:
                     logging.warn("Contact not found. Enter a valid contact ID")
                 else:
@@ -196,27 +293,38 @@ def contact_menu(mode):
                     print(f"Bitcoin address (text): {contact.addr}")
                     print("Bitcoin address (QR code):")
                     show_qr(contact.addr)
-            elif choice == 4:
-                contact_id_to_edit = int(input("Enter the contact ID number to edit: "))
-                contact = cm.get_contact(contact_id_to_edit)
+            press_any_key_to_return(t, return_str)
+
+    def edit_contact():
+        with t.fullscreen():
+            contact_id_to_edit = int(
+                get_user_input(t, 1, "Enter the contact ID number to edit: ")
+            )
+            contact = cm.get_contact(contact_id_to_edit)
+            with t.location(0, 4):
                 if contact is None:
                     logging.warn("Contact not found. Enter a valid contact ID")
                 else:
                     print(f"Name: {contact.name}")
                     print(f"Bitcoin address (text): {contact.addr}")
-                    print("Enter new name for contact (leave blank to keep the same):")
-                    new_name = input()
+                    new_name = get_user_input(
+                        t,
+                        7,
+                        "Enter new name for contact (leave blank to keep the same):",
+                    )
                     if new_name == "":
                         new_name = contact.name
-                    print(
-                        "Enter new BTC address for contact (leave blank to keep the same):"
+                    new_addr = get_user_input(
+                        t,
+                        9,
+                        "Enter new BTC address for contact (leave blank to keep the same):",
                     )
-                    new_addr = input()
                     if new_addr == "":
                         new_addr = contact.addr
                     if btc_addr_is_valid(new_addr, mode):
-                        print(f"Confirm changes: {new_name} - {new_addr} (y/n)")
-                        confirm = input()
+                        confirm = get_user_input(
+                            t, 11, f"Confirm changes: {new_name} - {new_addr} (y/n)"
+                        )
                         if confirm == "y":
                             cm.update_contact(
                                 Contact(contact_id_to_edit, new_name, new_addr)
@@ -226,12 +334,33 @@ def contact_menu(mode):
                             logging.warn("Contact not updated")
                     else:
                         logging.warn("Invalid address - contact not updated. Try again")
-            elif choice == 5:
-                print("Enter the contact ID number to delete:")
-                contact_id_to_delete = int(input())
-                cm.delete_contact(contact_id_to_delete)
-            elif choice == 6:
-                break
+                press_any_key_to_return(t, return_str)
+
+    def delete_contact():
+        with t.fullscreen():
+            contact_id_to_delete = int(
+                get_user_input(t, 1, "Enter the contact ID number to delete:")
+            )
+            completed = cm.delete_contact(contact_id_to_delete)
+            if completed:
+                logging.info(f"Contact #{contact_id_to_delete} deleted successfully")
+                print(f"Contact #{contact_id_to_delete} deleted successfully")
+            else:
+                logging.warn(
+                    f"Contact #{contact_id_to_delete} not found - nothing deleted"
+                )
+                print(f"Contact #{contact_id_to_delete} not found - nothing deleted")
+
+    menu_options = [
+        ("View contact list", show_contacts),
+        ("Add new contact", add_contact),
+        ("Get individual contact", get_contact),
+        ("Edit contact", edit_contact),
+        ("Delete contact", delete_contact),
+        ("Back to main menu", lambda: None),
+    ]
+
+    generic_menu(menu_options, "CONTACT MENU")
 
 
 def show_qr(addr):
@@ -245,25 +374,35 @@ def show_qr(addr):
 def tx_send_menu():
     with t.fullscreen():
         print("Pick a contact to send a transaction to")
-        cm.view_list()
-        contact_id = int(input())
+        table = cm.get_list()
+        if table is None:
+            print(t.bold_reverse("No contacts found"))
+            press_any_key_to_return(t, "to the main menu")
+            return
+        contact_id = int(get_user_input(t, 1, "Enter the contact ID number: "))
         contact = cm.get_contact(contact_id)
         to_addr = contact.addr
-        print("How much BTC would you like to send?")
         bal = wm.get_bal()
-        print(f"Available balance: {bal} sats")
-        amount = int(input())
+        print(f"Your available balance: {bal} sats")
+        amount = int(
+            get_user_input(t, 4, "How much BTC would you like to send (in sats)?")
+        )
         print(
             f"""Transaction Summary:
-    TO (NAME) = {contact.name}
-    TO (ADDRESS) = {to_addr}
-    AMOUNT = {amount} satoshis
-    """
+  TO (NAME) = {contact.name}
+  TO (ADDRESS) = {to_addr}
+  AMOUNT = {amount} satoshis
+  """
         )
-        yn = input("Are you sure you want to send this transaction? (y/n) ")
+        yn = get_user_input(
+            t, 11, "Are you sure you want to send this transaction? (y/n) "
+        )
         if yn == "y":
             try:
                 txid = wm.get_prvkey().send([(to_addr, amount, "satoshi")])
                 logging.info(f"Transaction completed - TXID = {txid}")
             except InsufficientFunds:
                 logging.error("Insufficient funds - transaction not sent")
+        else:
+            logging.warn("Transaction cancelled")
+        press_any_key_to_return(t, "to the main menu")
