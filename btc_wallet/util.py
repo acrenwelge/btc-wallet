@@ -1,3 +1,4 @@
+import logging
 from enum import Enum
 
 from blessed import Terminal
@@ -13,11 +14,22 @@ class Modes(Enum):
 def press_any_key_to_return(term: Terminal, prompt: str = ""):
     with term.location(0, term.height - 1):
         print(term.bold_reverse("Press any key to return " + prompt))
-    term.inkey()
+    key = get_keypress(term)
+    if not key:
+        logging.warn("Logging out due to inactivity")
+        quit()
 
 
-""" Prints prompt and gathers user input from the terminal starting at specified line number from top of screen
+""" Gets a Keystroke from terminal using a default timeout
+All '.inkey()' calls should be wrapped by this function to ensure consistency
 """
+
+
+def get_keypress(term: Terminal):
+    return term.inkey(timeout=5)
+
+
+""" Prints prompt and gathers user input from the terminal starting at specified line number from top of screen"""
 
 
 def get_user_input(term: Terminal, line: int, prompt: str) -> str:
@@ -26,13 +38,16 @@ def get_user_input(term: Terminal, line: int, prompt: str) -> str:
         with term.location(0, line):
             print(prompt)
             print(res)
-        key = term.inkey()
+        key = get_keypress(term)
         if key.isalnum() or key == " ":
             res += key
         elif key.name == "KEY_BACKSPACE" or key.name == "KEY_DELETE":
             res = res[:-1]
         elif key.name == "KEY_ENTER":
             return res
+        elif not key:
+            logging.warn("Logging out due to inactivity")
+            quit()
 
 
 # Modes.TEST used for validating testnet addresses

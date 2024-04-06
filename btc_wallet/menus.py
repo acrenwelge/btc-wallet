@@ -18,13 +18,13 @@ from .util import (
     SATS_PER_BTC,
     Modes,
     btc_addr_is_valid,
+    get_keypress,
     get_user_input,
     press_any_key_to_return,
     sats_to_btc,
 )
 from .wallet_mgr import WalletAlreadyExistsError, WalletManager
 
-MENU_ERR_MSG = "Invalid input - try again"
 t = Terminal()
 
 
@@ -64,13 +64,36 @@ def main_menu():
         print(t.clear())
         print_txs(txs)
 
+    def print_txs(txs):
+        table = PrettyTable()
+        table.field_names = [
+            "Transaction ID",
+            "Amount",
+            "Fee",
+            "Confirmed",
+            "Block Height",
+        ]
+        for tx in txs:
+            tinfo = tx_service.get_tx(tx)
+            table.add_row(
+                [
+                    tinfo.txid,
+                    tinfo.amount,
+                    tinfo.fee,
+                    tinfo.confirmed,
+                    tinfo.block_height,
+                ]
+            )
+        print(table)
+
     def change_pw():
         with t.fullscreen():
             print(f"Your current password is: {user_service.get_pw_from_file()}")
-            newpw = input("Enter a new password: \n")
+            newpw = get_user_input(t, 2, "Enter a new password: \n")
             user_service.save_pw(newpw)
             logging.info("New password saved")
-            print("Password changed successfully!")
+            with t.location(0, 4):
+                print("Password changed successfully!")
             press_any_key_to_return(t, "to the main menu")
 
     menu_options = [
@@ -124,7 +147,7 @@ def generic_menu(menu_options: List[Tuple[str, Callable]], menu_name) -> int:
             with t.location(0, t.height - 1):
                 print("Use arrow keys to navigate, ENTER to select, and Q to quit.")
 
-            key = t.inkey()
+            key = get_keypress(t)
 
             if key.name == "KEY_UP":
                 selected_option_index = max(0, selected_option_index - 1)
@@ -141,17 +164,9 @@ def generic_menu(menu_options: List[Tuple[str, Callable]], menu_name) -> int:
                     break  # Exit the menu loop if the last option is selected
             elif key.lower() == "q":
                 quit()
-
-
-def print_txs(txs):
-    table = PrettyTable()
-    table.field_names = ["Transaction ID", "Amount", "Fee", "Confirmed", "Block Height"]
-    for tx in txs:
-        tinfo = tx_service.get_tx(tx)
-        table.add_row(
-            [tinfo.txid, tinfo.amount, tinfo.fee, tinfo.confirmed, tinfo.block_height]
-        )
-    print(table)
+            elif not key:  # timeout
+                logging.warn("Logging out due to inactivity")
+                break
 
 
 def wallet_menu():
@@ -160,7 +175,12 @@ def wallet_menu():
             copied = False
             while True:
                 print(t.clear)
-                addr = wm.get_addr()
+                try:
+                    addr = wm.get_addr()
+                except ValueError:
+                    logging.error("No wallet found")
+                    press_any_key_to_return(t, "to the wallet menu")
+                    return
                 print(addr)
                 show_qr(addr)
                 bal = int(wm.get_bal())
@@ -174,7 +194,7 @@ def wallet_menu():
                     print(
                         "Press C to copy the address; ENTER to return to wallet menu."
                     )
-                key = t.inkey()
+                key = get_keypress(t)
                 if key.lower() == "c":
                     import pyperclip
 
@@ -185,33 +205,7 @@ def wallet_menu():
 
     def recover_wallet():
         with t.fullscreen(), t.hidden_cursor():
-            words = ""
-            passphr = ""
-            while True:
-                with t.location(0, 1):
-                    print("Enter your 12 or 24 word seed phrase:")
-                    print(words)
-                key = t.inkey()
-                if key.isalnum() or key == " ":
-                    words += key
-                elif key.name == "KEY_BACKSPACE" or key.name == "KEY_DELETE":
-                    words = words[:-1]
-                elif key.name == "KEY_ENTER":
-                    break
-            while True:
-                with t.location(0, 4):
-                    print("Enter your passphrase (if there is none, leave blank):")
-                    print(passphr)
-                key = t.inkey()
-                if key.isalnum() or key == " ":
-                    passphr += key
-                    print(passphr)
-                elif key.name == "KEY_BACKSPACE" or key.name == "KEY_DELETE":
-                    t.get_location()
-                    passphr = passphr[:-1]
-                    print(passphr)
-                elif key.name == "KEY_ENTER":
-                    break
+            words = get_user_input(t, 1, "Enter your 12 or 24 word seed phrase:")
             if len(words.split()) not in [12, 24]:
                 with t.location(0, 7):
                     logging.error(
@@ -220,8 +214,11 @@ def wallet_menu():
                         )
                     )
                     print(t.bold_reverse("Hit any key to return to the menu"))
-                    t.inkey()
+                    get_keypress(t)
                     return
+            passphr = get_user_input(
+                t, 4, "Enter your passphrase (if there is none, leave blank):"
+            )
             try:
                 wm.recover(words, passphr)
             except WalletAlreadyExistsError:
@@ -232,18 +229,44 @@ def wallet_menu():
                         )
                     )
                     print(t.bold_reverse("Hit any key to return to the menu"))
-                    t.inkey()
+                    get_keypress(t)
 
     def generate_wallet():
-        if wm.has_wallet():
-            with t.location(0, 7):
-                logging.error(
-                    t.bold_reverse("Wallet already exists, cannot generate new wallet")
-                )
-                print(t.bold_reverse("Hit any key to return to the menu"))
-                t.inkey()
-                return
-        wm.generate()
+        with t.fullscreen():
+            print(t.clear())
+            if wm.has_wallet():
+                with t.location(0, 7):
+                    logging.error(
+                        t.bold_reverse(
+                            "Wallet already exists, cannot generate new wallet"
+                        )
+                    )
+                    print(t.bold_reverse("Hit any key to return to the menu"))
+                    get_keypress(t)
+                    return
+            passphrase = get_user_input(
+                t,
+                1,
+                "Enter a passphrase for your new wallet (make it unique but memorable!). This is optional - if you do not want to set a passphrase, leave blank",
+            )
+            words, bin_seed, entropy = wm.generate(passphrase)
+            logging.info("Wallet generated")
+            print(
+                """
+  *******************************************************************************
+  Your wallet has been generated!
+  INSTRUCTIONS: WRITE DOWN THE FOLLOWING WORDS TO BACKUP YOUR WALLET AND STORE IN A SAFE AND SECURE OFFLINE LOCATION.
+  THIS BACKUP PHRASE WILL NOT BE SAVED ANYWHERE ON THIS DEVICE. FAILURE TO SECURE THIS BACKUP SEED PHRASE MAY CAUSE YOU TO LOSE YOUR BITCOIN.
+  DO NOT FORGET THESE!
+  *******************************************************************************
+  """
+            )
+            print("*" * 20)
+            print(words)
+            print("*" * 20)
+
+            print(f"\nThe binary seed from the mnemonic is: {bin_seed.hex()}")
+            print(f"Entropy = {entropy}\n")
 
     menu_options = [
         ("Show bitcoin address", show_addr),

@@ -2,12 +2,11 @@
 
 ## Ideas
 
+* Implement a notification system for transaction confirmations
 * Encrypt wallet files containing wallet seed
 * Use a different address per transaction (following BIP 32)
-* Timeout - logout user after a certain amount of time
 * Implement multi-signature wallets for added security
 * Integrate with hardware wallets
-* Implement a notification system for transaction confirmations
 * Add a feature to estimate transaction fees
 * Implement a backup system for the wallet
 * Add a feature to import/export private keys
@@ -22,6 +21,32 @@
 In progress:
 
 * Make a terminal UI using blessed
+* Encrypt wallet files containing wallet seed (use the same password as the app)
+
+GitHub Copilot: Implementing a backup system for a wallet in a cryptocurrency application involves creating a way to save and restore the private keys which control access to the cryptocurrency. Here's a general approach:
+
+1. **Encrypt the private key(s)**: The private keys should be encrypted for security. This could be done using a password entered by the user.
+
+2. **Export the encrypted key(s)**: The encrypted keys could be exported to a file. This file is what the user will use to restore their wallet.
+
+3. **Import the encrypted key(s)**: Create a feature that allows the user to import their encrypted keys from a file. After entering the correct password, the keys should be decrypted and loaded into the wallet.
+
+Here's a simple pseudocode:
+
+```pseudocode
+function backupWallet(password):
+    encryptedKeys = encrypt(privateKeys, password)
+    saveToFile(encryptedKeys)
+
+function restoreWallet(file, password):
+    encryptedKeys = loadFromFile(file)
+    privateKeys = decrypt(encryptedKeys, password)
+    loadKeysIntoWallet(privateKeys)
+```
+
+Please note that this is a simplified version of what you would need to do. Cryptography is complex and making mistakes can lead to lost or stolen cryptocurrency. It's recommended to use well-tested libraries for the encryption and decryption process, and to have your code reviewed by a security expert.
+
+Also, this pseudocode doesn't include any error handling. In a real implementation, you would need to handle potential errors, such as the user entering an incorrect password, the file not existing, etc.
 
 Bugs to fix:
 
@@ -44,6 +69,7 @@ Completed:
 * Update contacts
 * Delete contacts
 * BTC address verification (any time a btc address is input)
+* Timeout - logout user after a certain amount of time of inactivity
 
 Bugs fixed:
 ✅ Off by one error in contact selection

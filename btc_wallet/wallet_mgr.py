@@ -48,7 +48,10 @@ recover from a seed phrase
             )
 
     def get_addr(self):
-        return self.get_prvkey().address
+        key = self.get_prvkey()
+        if key is None:
+            raise ValueError("No wallet found")
+        return key.address
 
     def get_bal(self):
         return self.get_prvkey().get_balance()
@@ -79,18 +82,13 @@ recover from a seed phrase
     def has_wallet(self):
         return self.hdwallet is not None
 
-    def generate(self):
-        # TODO rewrite to not take user input
+    def generate(self, passphrase: str):
         if self.has_wallet():
             raise WalletAlreadyExistsError
         # Generate seed, passphrase optional (BIP-39)
-        yn = input("Would you like to include a passphrase for your wallet? (y/n)")
-        passphr = ""
-        if yn == "y":
-            passphr = input("Set your passphrase. Make it unique but memorable!\n")
         mnemo = Mnemonic("english")
         words = mnemo.generate(strength=128)
-        bin_seed = mnemo.to_seed(words, passphrase=passphr)
+        bin_seed = mnemo.to_seed(words, passphrase=passphrase)
         # save to hidden file
         with open(self.seedfile, "wb+") as file:
             file.write(bin_seed)
@@ -99,21 +97,4 @@ recover from a seed phrase
         # entropy data
         entropy_byte_arr = mnemo.to_entropy(words)
         readable_entr = "".join("{:02x}".format(x) for x in entropy_byte_arr)
-        logging.info("Wallet generated")
-
-        print(
-            """
-*******************************************************************************
-Your wallet has been generated!
-INSTRUCTIONS: WRITE DOWN THE FOLLOWING WORDS TO BACKUP YOUR WALLET AND STORE IN A SAFE AND SECURE OFFLINE LOCATION.
-THIS BACKUP PHRASE WILL NOT BE SAVED ANYWHERE ON THIS DEVICE. FAILURE TO SECURE THIS BACKUP SEED PHRASE MAY CAUSE YOU TO LOSE YOUR BITCOIN.
-DO NOT FORGET THESE!
-*******************************************************************************
-"""
-        )
-        print("*" * 20)
-        print(words)
-        print("*" * 20)
-
-        print(f"\nThe binary seed from the mnemonic is: {bin_seed.hex()}")
-        print(f"Entropy = {readable_entr}\n")
+        return [words, bin_seed, readable_entr]
