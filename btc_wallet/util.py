@@ -20,19 +20,15 @@ def press_any_key_to_return(term: Terminal, prompt: str = ""):
         quit()
 
 
-""" Gets a Keystroke from terminal using a default timeout
-All '.inkey()' calls should be wrapped by this function to ensure consistency
-"""
-
-
 def get_keypress(term: Terminal):
-    return term.inkey(timeout=5)
-
-
-""" Prints prompt and gathers user input from the terminal starting at specified line number from top of screen"""
+    """Gets a Keystroke from terminal using a default timeout
+    All '.inkey()' calls should be wrapped by this function to ensure consistency
+    """
+    return term.inkey(timeout=60)
 
 
 def get_user_input(term: Terminal, line: int, prompt: str) -> str:
+    """Prints prompt and gathers user input from the terminal starting at specified line number from top of screen"""
     res = ""
     while True:
         with term.location(0, line):
@@ -50,10 +46,12 @@ def get_user_input(term: Terminal, line: int, prompt: str) -> str:
             quit()
 
 
-# Modes.TEST used for validating testnet addresses
-# Modes.PROD used for validating mainnet addresses
-# Providing a mainnet address with Modes.TEST should return False, vice versa for testnet addresses
 def btc_addr_is_valid(addr: str, mode: Modes):
+    """Check if a Bitcoin address is valid for the specified mode (testnet or prod).
+    `Modes.TEST` used for validating testnet addresses.
+    `Modes.PROD` used for validating mainnet addresses.
+    Providing a mainnet address with `Modes.TEST` should return `False`, vice versa for testnet addresses
+    """
     if mode == Modes.PROD:
         try:
             return Validation.is_btc_address(addr)

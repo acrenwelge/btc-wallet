@@ -28,41 +28,130 @@ from .wallet_mgr import WalletAlreadyExistsError, WalletManager
 t = Terminal()
 
 
+class UIStrings:
+    MAIN_MENU = "MAIN MENU"
+    WALLET_MENU = "WALLET MENU"
+    CONTACT_MENU = "CONTACT MENU"
+    TX_SEND_MENU = "SEND BITCOIN"
+
+    @classmethod
+    def to_menu(cls, menu_name: str):
+        return f"to the {menu_name.lower()}"
+
+
 def start(args: Namespace):
     global mode, user_service
     mode = args.mode
     logging.info(f"Starting app in {mode.value} mode...")
     user_service = UserService()
-    if login():
-        logging.info("Password confirmed")
-        # init wallet
-        global wm, cm, tx_service
-        wm = WalletManager(mode)
-        cm = ContactManager(mode)
-        tx_service = TxService(mode)
+    global wm, cm, tx_service
+    wm = WalletManager(mode)
+    cm = ContactManager(mode)
+    tx_service = TxService(mode)
+    if not wm.seedfile_exists():
+        print(
+            """
+  *******************************************************************************
+  WARNING: No existing wallet found - you will need to generate a new one or
+  recover from a seed phrase
+  *******************************************************************************
+  """
+        )
+        print("Press any key to continue")
+        get_keypress(t)
         main_menu()
-    else:
-        logging.info("Password incorrect - quitting")
         quit()
-
-
-def login():
     tries = 3
-    while tries >= 0:
+    while tries > 0:
         pw = getpass.getpass()
-        if user_service.validate_password(pw):
-            return True
+        success = wm.load_seed(pw)
+        if success:
+            logging.info("Wallet loaded successfully")
+            main_menu()
+            quit()
         else:
-            logging.warn(f"ERROR: incorrect password. {tries} more tries remaining")
             tries -= 1
-    return False
+            logging.error(
+                f"Incorrect password - wallet could not be loaded. {tries} more chances"
+            )
+    logging.info("Maximum password attempts reached - quitting")
+    quit()
+
+
+class TransactionInfo:
+    def __init__(self, txid, amount, fee, confirmed, block_height):
+        self.txid = txid
+        self.amount = amount
+        self.fee = fee
+        self.confirmed = confirmed
+        self.block_height = block_height
+
+    def __str__(self):
+        return f"TXID: {self.txid}, Amount: {self.amount}, Fee: {self.fee}, Confirmed: {self.confirmed}, Block Height: {self.block_height}"
 
 
 def main_menu():
+    def dummy_data():
+        import random
+
+        txs = []
+        init = 1234
+        for _ in range(5):
+            txs.append(
+                TransactionInfo(
+                    txid=init,
+                    amount=1000 * random.random(),
+                    fee=100 * random.random(),
+                    confirmed=True if random.random() > 0.5 else False,
+                    block_height=init * 10 + 1,
+                )
+            )
+            init += 1
+        return txs
+
     def view_txs():
         txs = wm.get_prvkey().get_transactions()
-        print(t.clear())
-        print_txs(txs)
+        with t.fullscreen():
+            print(t.clear())
+            print(t.reverse_bold("Your Bitcoin Transactions"))
+            if len(txs) == 0:
+                print("No transactions found")
+                txs = dummy_data()
+                table = PrettyTable()
+                table.field_names = [
+                    "Transaction ID",
+                    "Amount",
+                    "Fee",
+                    "Confirmed",
+                    "Block Height",
+                ]
+                for tinfo in txs:
+                    table.add_row(
+                        [
+                            tinfo.txid,
+                            tinfo.amount,
+                            tinfo.fee,
+                            tinfo.confirmed,
+                            tinfo.block_height,
+                        ]
+                    )
+                print(table)
+            else:
+                print_txs(txs)
+            with t.location(0, t.height - 1):
+                print(
+                    t.bold_reverse(
+                        "Press E to export transactions to CSV; press any other key to go back"
+                    )
+                )
+            key = get_keypress(t)
+            if not key:
+                logging.warn("Logging out due to inactivity")
+                quit()
+            elif key.lower() == "e":
+                export_txs(txs)
+            else:
+                return
 
     def print_txs(txs):
         table = PrettyTable()
@@ -86,34 +175,34 @@ def main_menu():
             )
         print(table)
 
-    def change_pw():
-        with t.fullscreen():
-            print(f"Your current password is: {user_service.get_pw_from_file()}")
-            newpw = get_user_input(t, 2, "Enter a new password: \n")
-            user_service.save_pw(newpw)
-            logging.info("New password saved")
-            with t.location(0, 4):
-                print("Password changed successfully!")
-            press_any_key_to_return(t, "to the main menu")
+    def export_txs(txs):
+        logging.info("Exporting transactions to file...")
+        if len(txs) == 0:
+            logging.error("No transactions found to export")
+        else:
+            with open("transactions.csv", "w") as f:
+                f.write("Transaction ID,Amount,Fee,Confirmed,Block Height\n")
+                for tinfo in txs:
+                    f.write(
+                        f"{tinfo.txid},{tinfo.amount},{tinfo.fee},{tinfo.confirmed},{tinfo.block_height}\n"
+                    )
+            print("Transactions exported successfully!")
 
     menu_options = [
         ("Bitcoin wallet", wallet_menu),
         ("Manage contact list", lambda: contact_menu(mode)),
         ("View bitcoin transactions", view_txs),
         ("Send bitcoin", tx_send_menu),
-        ("Change app password", change_pw),
         ("Quit", lambda: None),
     ]
-    generic_menu(menu_options, "MAIN MENU")
-
-
-"""
-Displays a generic menu with the given options and menu name.
-User selects an option and the corresponding function is called.
-"""
+    generic_menu(menu_options, UIStrings.MAIN_MENU)
 
 
 def generic_menu(menu_options: List[Tuple[str, Callable]], menu_name) -> int:
+    """
+    Displays a generic menu with the given options and menu name.
+    User selects an option and the corresponding function is called.
+    """
     selected_option_index = 0
 
     with t.fullscreen(), t.cbreak(), t.hidden_cursor():
@@ -124,7 +213,7 @@ def generic_menu(menu_options: List[Tuple[str, Callable]], menu_name) -> int:
                 t.bold(
                     t.black(t.on_white(f"{menu_name}   ({mode.value.upper()} MODE)"))
                 ).center(t.width)
-            )  # centering is off...
+            )  # TODO: centering is off...
             print("*" * t.width)
             if mode == Modes.TEST:
                 print(
@@ -166,7 +255,7 @@ def generic_menu(menu_options: List[Tuple[str, Callable]], menu_name) -> int:
                 quit()
             elif not key:  # timeout
                 logging.warn("Logging out due to inactivity")
-                break
+                quit()
 
 
 def wallet_menu():
@@ -179,11 +268,11 @@ def wallet_menu():
                     addr = wm.get_addr()
                 except ValueError:
                     logging.error("No wallet found")
-                    press_any_key_to_return(t, "to the wallet menu")
+                    press_any_key_to_return(t, UIStrings.to_menu(UIStrings.WALLET_MENU))
                     return
                 print(addr)
                 show_qr(addr)
-                bal = int(wm.get_bal())
+                bal = wm.get_bal()
                 if bal < (SATS_PER_BTC / 1000):  # display as sats if < 0.001 btc
                     print(f"Balance: {bal} sats")
                 else:  # display as btc if > 0.001 btc
@@ -213,9 +302,8 @@ def wallet_menu():
                             "Invalid number of words - must be 12 or 24 words"
                         )
                     )
-                    print(t.bold_reverse("Hit any key to return to the menu"))
-                    get_keypress(t)
-                    return
+                press_any_key_to_return(t, "to the wallet menu")
+                return
             passphr = get_user_input(
                 t, 4, "Enter your passphrase (if there is none, leave blank):"
             )
@@ -228,8 +316,7 @@ def wallet_menu():
                             "Wallet already exists, cannot recover new wallet"
                         )
                     )
-                    print(t.bold_reverse("Hit any key to return to the menu"))
-                    get_keypress(t)
+                press_any_key_to_return(t, UIStrings.to_menu(UIStrings.WALLET_MENU))
 
     def generate_wallet():
         with t.fullscreen():
@@ -241,32 +328,46 @@ def wallet_menu():
                             "Wallet already exists, cannot generate new wallet"
                         )
                     )
-                    print(t.bold_reverse("Hit any key to return to the menu"))
-                    get_keypress(t)
-                    return
+                press_any_key_to_return(t, "to the wallet menu")
+                return
             passphrase = get_user_input(
                 t,
                 1,
                 "Enter a passphrase for your new wallet (make it unique but memorable!). This is optional - if you do not want to set a passphrase, leave blank",
             )
-            words, bin_seed, entropy = wm.generate(passphrase)
-            logging.info("Wallet generated")
-            print(
-                """
-  *******************************************************************************
-  Your wallet has been generated!
-  INSTRUCTIONS: WRITE DOWN THE FOLLOWING WORDS TO BACKUP YOUR WALLET AND STORE IN A SAFE AND SECURE OFFLINE LOCATION.
-  THIS BACKUP PHRASE WILL NOT BE SAVED ANYWHERE ON THIS DEVICE. FAILURE TO SECURE THIS BACKUP SEED PHRASE MAY CAUSE YOU TO LOSE YOUR BITCOIN.
-  DO NOT FORGET THESE!
-  *******************************************************************************
-  """
+            encryption_password = get_user_input(
+                t,
+                3,
+                "Enter a password to encrypt your wallet file. This is optional - if you do not want to encrypt your wallet file, leave blank. Remember this password, as you will need it to access your wallet.",
             )
-            print("*" * 20)
-            print(words)
-            print("*" * 20)
-
-            print(f"\nThe binary seed from the mnemonic is: {bin_seed.hex()}")
-            print(f"Entropy = {entropy}\n")
+            with t.location(0, 7):
+                print("Wallet passphrase: " + passphrase)
+                print("Encryption password: " + encryption_password)
+            yn = get_user_input(
+                t, 10, "Are you sure you want to generate a new wallet? (y/n)"
+            )
+            if yn == "y":
+                words, bin_seed, entropy = wm.generate(passphrase, encryption_password)
+                logging.info("Wallet generated")
+                print(
+                    """
+      *******************************************************************************
+      Your wallet has been generated!
+      INSTRUCTIONS: WRITE DOWN THE FOLLOWING WORDS TO BACKUP YOUR WALLET AND STORE IN A SAFE AND SECURE OFFLINE LOCATION.
+      THIS BACKUP SEED PHRASE WILL BE USED TO RECOVER YOUR WALLET IF YOU LOSE ACCESS TO THIS DEVICE.
+      THIS BACKUP PHRASE WILL NOT BE SAVED ANYWHERE ON THIS DEVICE. FAILURE TO SECURE THIS BACKUP SEED PHRASE MAY CAUSE YOU TO LOSE YOUR BITCOIN.
+      !!DO NOT FORGET THESE!!
+      *******************************************************************************
+      """
+                )
+                print("*" * 20)
+                print(words)
+                print("*" * 20)
+                print(f"\nThe binary seed from the mnemonic is: {bin_seed.hex()}")
+                print(f"Entropy = {entropy}\n")
+            else:
+                logging.warn("Wallet generation cancelled")
+            press_any_key_to_return(t, UIStrings.to_menu(UIStrings.WALLET_MENU))
 
     menu_options = [
         ("Show bitcoin address", show_addr),
@@ -274,11 +375,10 @@ def wallet_menu():
         ("Generate new wallet", generate_wallet),
         ("Back to main menu", lambda: None),
     ]
-    generic_menu(menu_options, "WALLET MENU")
+    generic_menu(menu_options, UIStrings.WALLET_MENU)
 
 
 def contact_menu(mode):
-    return_str = "to the contact menu"
 
     def show_contacts():
         with t.fullscreen():
@@ -288,7 +388,7 @@ def contact_menu(mode):
                 print("No contacts found")
             else:
                 print(table)
-            press_any_key_to_return(t, return_str)
+            press_any_key_to_return(t, UIStrings.to_menu(UIStrings.CONTACT_MENU))
 
     def add_contact():
         with t.fullscreen():
@@ -300,7 +400,7 @@ def contact_menu(mode):
                 logging.info(f"Contact added: {cm}")
             else:
                 logging.warn("Invalid address - contact not added. Try again")
-            press_any_key_to_return(t, return_str)
+            press_any_key_to_return(t, UIStrings.to_menu(UIStrings.CONTACT_MENU))
 
     def get_contact():
         with t.fullscreen():
@@ -316,7 +416,7 @@ def contact_menu(mode):
                     print(f"Bitcoin address (text): {contact.addr}")
                     print("Bitcoin address (QR code):")
                     show_qr(contact.addr)
-            press_any_key_to_return(t, return_str)
+            press_any_key_to_return(t, UIStrings.to_menu(UIStrings.CONTACT_MENU))
 
     def edit_contact():
         with t.fullscreen():
@@ -356,8 +456,9 @@ def contact_menu(mode):
                         else:
                             logging.warn("Contact not updated")
                     else:
+                        print(t.clear())
                         logging.warn("Invalid address - contact not updated. Try again")
-                press_any_key_to_return(t, return_str)
+                press_any_key_to_return(t, UIStrings.to_menu(UIStrings.CONTACT_MENU))
 
     def delete_contact():
         with t.fullscreen():
@@ -373,6 +474,7 @@ def contact_menu(mode):
                     f"Contact #{contact_id_to_delete} not found - nothing deleted"
                 )
                 print(f"Contact #{contact_id_to_delete} not found - nothing deleted")
+            press_any_key_to_return(t, UIStrings.to_menu(UIStrings.CONTACT_MENU))
 
     menu_options = [
         ("View contact list", show_contacts),
@@ -383,7 +485,7 @@ def contact_menu(mode):
         ("Back to main menu", lambda: None),
     ]
 
-    generic_menu(menu_options, "CONTACT MENU")
+    generic_menu(menu_options, UIStrings.CONTACT_MENU)
 
 
 def show_qr(addr):
@@ -400,12 +502,12 @@ def tx_send_menu():
         table = cm.get_list()
         if table is None:
             print(t.bold_reverse("No contacts found"))
-            press_any_key_to_return(t, "to the main menu")
+            press_any_key_to_return(t, UIStrings.to_menu(UIStrings.MAIN_MENU))
             return
         contact_id = int(get_user_input(t, 1, "Enter the contact ID number: "))
         contact = cm.get_contact(contact_id)
         to_addr = contact.addr
-        bal = wm.get_bal()
+        bal = str(wm.get_bal())
         print(f"Your available balance: {bal} sats")
         amount = int(
             get_user_input(t, 4, "How much BTC would you like to send (in sats)?")
@@ -428,4 +530,4 @@ def tx_send_menu():
                 logging.error("Insufficient funds - transaction not sent")
         else:
             logging.warn("Transaction cancelled")
-        press_any_key_to_return(t, "to the main menu")
+        press_any_key_to_return(t, UIStrings.to_menu(UIStrings.MAIN_MENU))

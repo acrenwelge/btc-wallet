@@ -2,8 +2,9 @@
 
 ## Ideas
 
+* Lookup an address balance given a public key or xpub
 * Implement a notification system for transaction confirmations
-* Encrypt wallet files containing wallet seed
+* Add support for other languages (in UI and for seed phrase generation)
 * Use a different address per transaction (following BIP 32)
 * Implement multi-signature wallets for added security
 * Integrate with hardware wallets
@@ -14,14 +15,14 @@
 * Implement a light/dark mode for the UI
 * Add a feature to show the current cryptocurrency market rates (could use my other project)
 * Implement a feature to schedule recurring transactions
-* Add a feature to export transaction history
 * Implement a privacy mode that hides balance and transaction amounts
 * Add a feature to automatically update the wallet software.
 
 In progress:
 
 * Make a terminal UI using blessed
-* Encrypt wallet files containing wallet seed (use the same password as the app)
+* Add a feature to export transaction history to a CSV file
+* Encrypt wallet seed file
 
 GitHub Copilot: Implementing a backup system for a wallet in a cryptocurrency application involves creating a way to save and restore the private keys which control access to the cryptocurrency. Here's a general approach:
 
