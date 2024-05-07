@@ -34,7 +34,7 @@ class ContactManager:
         except FileNotFoundError:
             logging.error("Contact file not found")
 
-    def get_list(self):
+    def get_list_as_table(self) -> PrettyTable:
         if len(self.contacts) == 0:
             return None
         table = PrettyTable()

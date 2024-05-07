@@ -8,7 +8,10 @@ from typing import Callable, List, Tuple
 import qrcode
 from bit.exceptions import InsufficientFunds
 from blessed import Terminal
+from cryptography.fernet import InvalidToken
 from prettytable import PrettyTable
+
+from btc_wallet.address_lookup import lookup_balance
 
 from .contact import Contact
 from .contact_mgr import ContactManager
@@ -64,16 +67,17 @@ def start(args: Namespace):
     tries = 3
     while tries > 0:
         pw = getpass.getpass()
-        success = wm.load_seed(pw)
-        if success:
+        try:
+            wm.load_seed(pw)
             logging.info("Wallet loaded successfully")
             main_menu()
             quit()
-        else:
+        except InvalidToken:
             tries -= 1
             logging.error(
                 f"Incorrect password - wallet could not be loaded. {tries} more chances"
             )
+            continue
     logging.info("Maximum password attempts reached - quitting")
     quit()
 
@@ -110,32 +114,39 @@ def main_menu():
         return txs
 
     def view_txs():
-        txs = wm.get_prvkey().get_transactions()
+        def print_dummy():
+            print("No transactions found")
+            txs = dummy_data()
+            table = PrettyTable()
+            table.field_names = [
+                "Transaction ID",
+                "Amount",
+                "Fee",
+                "Confirmed",
+                "Block Height",
+            ]
+            for tinfo in txs:
+                table.add_row(
+                    [
+                        tinfo.txid,
+                        tinfo.amount,
+                        tinfo.fee,
+                        tinfo.confirmed,
+                        tinfo.block_height,
+                    ]
+                )
+            print(table)
+
         with t.fullscreen():
             print(t.clear())
+            if not wm.has_wallet():
+                logging.error("No wallet found")
+                press_any_key_to_return(t, UIStrings.to_menu(UIStrings.MAIN_MENU))
+                return
+            txs = wm.get_prvkey().get_transactions()
             print(t.reverse_bold("Your Bitcoin Transactions"))
             if len(txs) == 0:
-                print("No transactions found")
-                txs = dummy_data()
-                table = PrettyTable()
-                table.field_names = [
-                    "Transaction ID",
-                    "Amount",
-                    "Fee",
-                    "Confirmed",
-                    "Block Height",
-                ]
-                for tinfo in txs:
-                    table.add_row(
-                        [
-                            tinfo.txid,
-                            tinfo.amount,
-                            tinfo.fee,
-                            tinfo.confirmed,
-                            tinfo.block_height,
-                        ]
-                    )
-                print(table)
+                print_dummy()
             else:
                 print_txs(txs)
             with t.location(0, t.height - 1):
@@ -191,6 +202,7 @@ def main_menu():
     menu_options = [
         ("Bitcoin wallet", wallet_menu),
         ("Manage contact list", lambda: contact_menu(mode)),
+        ("Lookup bitcoin address", lambda: lookup_address(mode)),
         ("View bitcoin transactions", view_txs),
         ("Send bitcoin", tx_send_menu),
         ("Quit", lambda: None),
@@ -294,21 +306,28 @@ def wallet_menu():
 
     def recover_wallet():
         with t.fullscreen(), t.hidden_cursor():
-            words = get_user_input(t, 1, "Enter your 12 or 24 word seed phrase:")
-            if len(words.split()) not in [12, 24]:
+            words = get_user_input(t, 1, "Enter your 12, 18, or 24 word seed phrase:")
+            if len(words.split()) not in [12, 18, 24]:
                 with t.location(0, 7):
                     logging.error(
                         t.bold_reverse(
-                            "Invalid number of words - must be 12 or 24 words"
+                            "Invalid number of words - must be 12, 18, or 24 words"
                         )
                     )
                 press_any_key_to_return(t, "to the wallet menu")
                 return
             passphr = get_user_input(
-                t, 4, "Enter your passphrase (if there is none, leave blank):"
+                t,
+                4,
+                "Enter your BIP-39 passphrase for the wallet (if there is none, leave blank):",
+            )
+            encryption_pw = get_user_input(
+                t,
+                6,
+                "(Optional) Enter an encryption password which will be used to encrypt your private key on this device. If you do not want to encrypt your private key, leave blank:",
             )
             try:
-                wm.recover(words, passphr)
+                wm.recover(words, passphr, encryption_pw)
             except WalletAlreadyExistsError:
                 with t.location(0, 7):
                     logging.error(
@@ -383,7 +402,7 @@ def contact_menu(mode):
     def show_contacts():
         with t.fullscreen():
             print(t.clear())
-            table = cm.get_list()
+            table = cm.get_list_as_table()
             if table is None:
                 print("No contacts found")
             else:
@@ -488,6 +507,17 @@ def contact_menu(mode):
     generic_menu(menu_options, UIStrings.CONTACT_MENU)
 
 
+def lookup_address(mode):
+    with t.fullscreen():
+        print(t.clear())
+        addr = get_user_input(t, 1, "Enter the bitcoin address or xpub to look up:")
+        balance = lookup_balance(mode, addr)
+        if balance is not None:
+            with t.location(0, 4):
+                print(f"Balance for {addr}: {balance} sats")
+        press_any_key_to_return(t, "to the main menu")
+
+
 def show_qr(addr):
     # Display in console if 'qr' command installed, otherwise open file viewer
     if which("qr") is not None:
@@ -499,13 +529,26 @@ def show_qr(addr):
 def tx_send_menu():
     with t.fullscreen():
         print("Pick a contact to send a transaction to")
-        table = cm.get_list()
+        table = cm.get_list_as_table()
         if table is None:
             print(t.bold_reverse("No contacts found"))
             press_any_key_to_return(t, UIStrings.to_menu(UIStrings.MAIN_MENU))
             return
-        contact_id = int(get_user_input(t, 1, "Enter the contact ID number: "))
+        else:
+            print(table)
+        try:
+            contact_id = int(
+                get_user_input(t, t.height - 1, "Enter the contact ID number: ")
+            )
+        except ValueError:
+            logging.error("Invalid contact ID - must be an integer")
+            press_any_key_to_return(t, UIStrings.to_menu(UIStrings.MAIN_MENU))
+            return
         contact = cm.get_contact(contact_id)
+        if contact is None:
+            logging.error("Contact not found - please enter a valid contact ID")
+            press_any_key_to_return(t, UIStrings.to_menu(UIStrings.MAIN_MENU))
+            return
         to_addr = contact.addr
         bal = str(wm.get_bal())
         print(f"Your available balance: {bal} sats")

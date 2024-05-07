@@ -1,10 +1,13 @@
 import logging
 import os
+import time
 from os import makedirs
 from os.path import dirname, expanduser
+from typing import Optional
 
 from bip32 import BIP32, HARDENED_INDEX
 from bit import Key, PrivateKeyTestnet
+from cryptography.fernet import InvalidToken
 from mnemonic import Mnemonic
 
 from .encrypt import decrypt_seed, encrypt_seed
@@ -16,19 +19,28 @@ class WalletAlreadyExistsError(Exception):
 
 
 class WalletManager:
+    """Manages the creation, recovery, and use of a BIP32-compliant Bitcoin wallet.
+    Wallet balance is retrieved from the blockchain using the Bit library, then cached.
+    """
 
     hdwallet: BIP32
     seedfile: str
     saltfile: str
-    mode: Modes
+    application_mode: Modes
     keyidx: int
+    balance_cache: Optional[tuple[int, float]] = (
+        None  # wallet balance in satoshis, expiration time
+    )
+    cache_ttl: float = (
+        600  # time-to-live for balance cache in seconds; 10 minutes by default
+    )
 
     def __init__(self, mode: Modes):
-        self.mode = mode
-        if mode == Modes.PROD:
+        self.application_mode = mode
+        if self.application_mode == Modes.PROD:
             self.seedfile = expanduser("~/.wallet/seed.bin")
             self.saltfile = expanduser("~/.wallet/salt.bin")
-        elif mode == Modes.TEST:
+        elif self.application_mode == Modes.TEST:
             self.seedfile = expanduser("~/.wallet/testseed.bin")
             self.saltfile = expanduser("~/.wallet/testsalt.bin")
         self.hdwallet, self.keyidx = None, 1
@@ -39,24 +51,30 @@ class WalletManager:
     def saltfile_exists(self):
         return os.path.exists(self.saltfile)
 
-    def load_seed(self, decryption_password="") -> bool:
+    def load_seed(self, decryption_password="") -> None:
         """Load the seed from the seed file and initialize the BIP-32 HD wallet.
         If a decryption password is provided, the seed file will be decrypted first.
-        @return True if the seed was successfully loaded, False if no seed file was found.
         Exceptions are raised if there is a problem reading from or decrypting the seed file.
         """
         if not self.seedfile_exists():
             makedirs(dirname(self.seedfile), exist_ok=True)
             logging.warning("No seed file found")
-            return False
+            raise FileNotFoundError("No seed file found")
+        if not self.saltfile_exists():
+            makedirs(dirname(self.saltfile), exist_ok=True)
+            logging.warning("No salt file found")
+            raise FileNotFoundError("No salt file found")
         seed = None
         with open(self.seedfile, "rb") as file:
             seed = file.read()
-        if decryption_password != "":
-            salt = self._get_salt()
-            seed = decrypt_seed(seed, salt, decryption_password)
-        self.hdwallet = BIP32.from_seed(seed)
-        return True
+        try:
+            if decryption_password != "":
+                salt = self._get_salt()
+                seed = decrypt_seed(seed, salt, decryption_password)
+            self.hdwallet = BIP32.from_seed(seed)
+        except InvalidToken as e:
+            logging.error(f"Error loading seed: {e}")
+            raise e
 
     def get_addr(self):
         key = self.get_prvkey()
@@ -65,7 +83,11 @@ class WalletManager:
         return key.address
 
     def get_bal(self) -> int:
-        return int(self.get_prvkey().get_balance())
+        if self.balance_cache is None or time.time() > self.balance_cache[1]:
+            bal = int(self.get_prvkey().get_balance())
+            self.get_prvkey().balance
+            self.balance_cache = (bal, time.time() + self.cache_ttl)
+        return self.balance_cache[0]
 
     def get_wif(self):
         return self.get_prvkey().to_wif()
@@ -74,16 +96,23 @@ class WalletManager:
         if not self.has_wallet():
             return None
         prvkey = self.hdwallet.get_privkey_from_path([HARDENED_INDEX, self.keyidx])
-        if self.mode == Modes.PROD:
+        if self.application_mode == Modes.PROD:
             return Key.from_hex(prvkey.hex())
-        elif self.mode == Modes.TEST:
+        elif self.application_mode == Modes.TEST:
             return PrivateKeyTestnet.from_hex(prvkey.hex())
 
-    def recover(self, words, bip32_passphrase=""):
+    def recover(self, words, bip32_passphrase="", encryption_password=""):
         if self.has_wallet():
             raise WalletAlreadyExistsError
         mnemo = Mnemonic("english")
         bin_seed = mnemo.to_seed(words, passphrase=bip32_passphrase)
+        # encrypt and save salt if encryption password provided
+        if encryption_password != "":
+            encrypted_seed, salt = encrypt_seed(bin_seed, encryption_password)
+            with open(self.saltfile, "wb+") as file_out:
+                file_out.write(salt)
+                logging.info("Random salt saved to file")
+            bin_seed = encrypted_seed
         with open(self.seedfile, "wb+") as file:
             file.write(bin_seed)
             logging.info("Binary seed saved to file")
@@ -124,8 +153,8 @@ class WalletManager:
             try:
                 os.remove(self.seedfile)
                 os.remove(self.saltfile)
-            except FileNotFoundError as e:
-                logging.warning(f"No file found to delete")
+            except FileNotFoundError:
+                logging.warning("No file found to delete")
             logging.info("Wallet wiped!")
         else:
             logging.error("No wallet found to wipe")

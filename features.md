@@ -2,12 +2,14 @@
 
 ## Ideas
 
-* Lookup an address balance given a public key or xpub
-* Implement a notification system for transaction confirmations
 * Add support for other languages (in UI and for seed phrase generation)
 * Use a different address per transaction (following BIP 32)
+* Search for transactions by date, amount, or address
+* Implement a notification system for transaction confirmations
+* Generate new keys until a desired address is found (for vanity addresses)
 * Implement multi-signature wallets for added security
 * Integrate with hardware wallets
+* Autocomplete for seed phrase recovery
 * Add a feature to estimate transaction fees
 * Implement a backup system for the wallet
 * Add a feature to import/export private keys
@@ -20,34 +22,7 @@
 
 In progress:
 
-* Make a terminal UI using blessed
-* Add a feature to export transaction history to a CSV file
-* Encrypt wallet seed file
-
-GitHub Copilot: Implementing a backup system for a wallet in a cryptocurrency application involves creating a way to save and restore the private keys which control access to the cryptocurrency. Here's a general approach:
-
-1. **Encrypt the private key(s)**: The private keys should be encrypted for security. This could be done using a password entered by the user.
-
-2. **Export the encrypted key(s)**: The encrypted keys could be exported to a file. This file is what the user will use to restore their wallet.
-
-3. **Import the encrypted key(s)**: Create a feature that allows the user to import their encrypted keys from a file. After entering the correct password, the keys should be decrypted and loaded into the wallet.
-
-Here's a simple pseudocode:
-
-```pseudocode
-function backupWallet(password):
-    encryptedKeys = encrypt(privateKeys, password)
-    saveToFile(encryptedKeys)
-
-function restoreWallet(file, password):
-    encryptedKeys = loadFromFile(file)
-    privateKeys = decrypt(encryptedKeys, password)
-    loadKeysIntoWallet(privateKeys)
-```
-
-Please note that this is a simplified version of what you would need to do. Cryptography is complex and making mistakes can lead to lost or stolen cryptocurrency. It's recommended to use well-tested libraries for the encryption and decryption process, and to have your code reviewed by a security expert.
-
-Also, this pseudocode doesn't include any error handling. In a real implementation, you would need to handle potential errors, such as the user entering an incorrect password, the file not existing, etc.
+* Make user settings configurable and save them to a file
 
 Bugs to fix:
 
@@ -71,6 +46,13 @@ Completed:
 * Delete contacts
 * BTC address verification (any time a btc address is input)
 * Timeout - logout user after a certain amount of time of inactivity
+* Make a terminal UI using blessed
+* Add a feature to export transaction history to a CSV file
+* Encrypt wallet seed file
+* Cache the balance of an address to avoid querying the blockchain every time, and set a TTL for the cache
+* Lookup an address balance given a public key or xpub
 
 Bugs fixed:
 ✅ Off by one error in contact selection
+✅ View txs should be blank when no wallet exists
+✅ Seed should be encrypted when recovering from seed phrase
