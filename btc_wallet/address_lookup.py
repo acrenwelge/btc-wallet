@@ -1,3 +1,5 @@
+import logging
+
 import requests
 
 from btc_wallet.util import Modes
@@ -16,5 +18,7 @@ def lookup_balance(mode, address_or_xpub):
         balance = sum(utxo["value"] for utxo in utxos)
         return balance
     else:
-        print(f"Failed to retrieve balance. Status code: {response.status_code}")
+        logging.error(
+            f"Failed to retrieve balance. Status code: {response.status_code}"
+        )
         return None

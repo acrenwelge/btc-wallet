@@ -17,18 +17,22 @@ from .contact import Contact
 from .contact_mgr import ContactManager
 from .tx_service import TxService
 from .user_service import UserService
+from .user_settings import UserSettings
 from .util import (
     SATS_PER_BTC,
     Modes,
     btc_addr_is_valid,
     get_keypress,
     get_user_input,
+    on_shutdown,
     press_any_key_to_return,
+    print_with_theme,
     sats_to_btc,
 )
 from .wallet_mgr import WalletAlreadyExistsError, WalletManager
 
 t = Terminal()
+settings = UserSettings.get_instance()
 
 
 class UIStrings:
@@ -36,6 +40,7 @@ class UIStrings:
     WALLET_MENU = "WALLET MENU"
     CONTACT_MENU = "CONTACT MENU"
     TX_SEND_MENU = "SEND BITCOIN"
+    SETTINGS_MENU = "USER SETTINGS"
 
     @classmethod
     def to_menu(cls, menu_name: str):
@@ -63,7 +68,7 @@ def start(args: Namespace):
         print("Press any key to continue")
         get_keypress(t)
         main_menu()
-        quit()
+        on_shutdown(t)
     tries = 3
     while tries > 0:
         pw = getpass.getpass()
@@ -71,7 +76,7 @@ def start(args: Namespace):
             wm.load_seed(pw)
             logging.info("Wallet loaded successfully")
             main_menu()
-            quit()
+            on_shutdown(t)
         except InvalidToken:
             tries -= 1
             logging.error(
@@ -79,7 +84,7 @@ def start(args: Namespace):
             )
             continue
     logging.info("Maximum password attempts reached - quitting")
-    quit()
+    on_shutdown(t)
 
 
 class TransactionInfo:
@@ -158,7 +163,7 @@ def main_menu():
             key = get_keypress(t)
             if not key:
                 logging.warn("Logging out due to inactivity")
-                quit()
+                on_shutdown(t)
             elif key.lower() == "e":
                 export_txs(txs)
             else:
@@ -205,12 +210,15 @@ def main_menu():
         ("Lookup bitcoin address", lambda: lookup_address(mode)),
         ("View bitcoin transactions", view_txs),
         ("Send bitcoin", tx_send_menu),
+        ("Change settings", settings_menu),
         ("Quit", lambda: None),
     ]
     generic_menu(menu_options, UIStrings.MAIN_MENU)
 
 
-def generic_menu(menu_options: List[Tuple[str, Callable]], menu_name) -> int:
+def generic_menu(
+    menu_options: List[Tuple[str, Callable]], menu_name, menu_description=""
+) -> int:
     """
     Displays a generic menu with the given options and menu name.
     User selects an option and the corresponding function is called.
@@ -219,34 +227,42 @@ def generic_menu(menu_options: List[Tuple[str, Callable]], menu_name) -> int:
 
     with t.fullscreen(), t.cbreak(), t.hidden_cursor():
         while True:
-            print(t.clear)
-            print("*" * t.width)
-            print(
-                t.bold(
-                    t.black(t.on_white(f"{menu_name}   ({mode.value.upper()} MODE)"))
-                ).center(t.width)
-            )  # TODO: centering is off...
-            print("*" * t.width)
+            print_with_theme(t, t.clear)
+            print_with_theme(t, "*" * t.width)
+            print_with_theme(
+                t,
+                t.bold(f" {menu_name} - ({mode.value.upper()} MODE)"),
+            )
+            print_with_theme(t, "*" * t.width)
             if mode == Modes.TEST:
-                print(
+                print_with_theme(
+                    t,
                     t.red(
-                        "WARNING: You are in TESTNET mode. This mode is only for testing and using test bitcoin. Do not enter real bitcoin addresses or send real bitcoin!"
-                    )
+                        " WARNING: You are in TESTNET mode. This mode is only for testing and using test bitcoin. Do not enter real bitcoin addresses or send real bitcoin!"
+                    ),
                 )
             elif mode == Modes.PROD:
-                print(
+                print_with_theme(
+                    t,
                     t.green(
-                        "WARNING: You are in MAINNET mode. Do NOT enter testnet addresses. Be careful with real bitcoin!"
-                    )
+                        " WARNING: You are in MAINNET mode. Do NOT enter testnet addresses. Be careful with real bitcoin!"
+                    ),
                 )
+            if menu_description != "":
+                print_with_theme(t, menu_description)
+                print_with_theme(t, "*" * t.width)
             for i, option in enumerate(menu_options):
                 if i == selected_option_index:
-                    print(t.bold_reverse(option[0]))  # Highlight the selected option
+                    print_with_theme(
+                        t, t.bold_reverse(" > " + option[0])
+                    )  # Highlight the selected option
                 else:
-                    print(option[0])
+                    print_with_theme(t, " " + option[0])
 
             with t.location(0, t.height - 1):
-                print("Use arrow keys to navigate, ENTER to select, and Q to quit.")
+                print_with_theme(
+                    t, " Use arrow keys to navigate, ENTER to select, and Q to quit."
+                )
 
             key = get_keypress(t)
 
@@ -264,10 +280,10 @@ def generic_menu(menu_options: List[Tuple[str, Callable]], menu_name) -> int:
                 if selected_option_index == len(menu_options) - 1:
                     break  # Exit the menu loop if the last option is selected
             elif key.lower() == "q":
-                quit()
+                on_shutdown(t)
             elif not key:  # timeout
                 logging.warn("Logging out due to inactivity")
-                quit()
+                on_shutdown(t)
 
 
 def wallet_menu():
@@ -511,10 +527,13 @@ def lookup_address(mode):
     with t.fullscreen():
         print(t.clear())
         addr = get_user_input(t, 1, "Enter the bitcoin address or xpub to look up:")
-        balance = lookup_balance(mode, addr)
-        if balance is not None:
-            with t.location(0, 4):
-                print(f"Balance for {addr}: {balance} sats")
+        sat_balance = lookup_balance(mode, addr)
+        with t.location(0, 4):
+            if sat_balance is not None:
+                print(f"Balance for {addr}: {sat_balance} sats")
+                print(f"Balance for {addr}: {sats_to_btc(sat_balance)} BTC")
+            else:
+                print("Error retrieving balance - please try again")
         press_any_key_to_return(t, "to the main menu")
 
 
@@ -574,3 +593,124 @@ def tx_send_menu():
         else:
             logging.warn("Transaction cancelled")
         press_any_key_to_return(t, UIStrings.to_menu(UIStrings.MAIN_MENU))
+
+
+def settings_menu():
+    def edit_currency():
+        def set_valid_currency(new_currency):
+            settings.currency = new_currency
+
+        generic_menu(
+            [
+                ("USD", lambda: set_valid_currency("USD")),
+                ("EUR", lambda: set_valid_currency("EUR")),
+                ("(Back to settings menu)", lambda: None),
+            ],
+            "Currency",
+            f"Current setting: {settings.currency}",
+        )
+
+    def edit_language():
+        def set_valid_language(new_language):
+            settings.language = new_language
+
+        generic_menu(
+            [
+                ("English", lambda: set_valid_language("en")),
+                ("Spanish", lambda: set_valid_language("es")),
+                ("(Back to settings menu)", lambda: None),
+            ],
+            "Language",
+            f"Current setting: {settings.language}",
+        )
+
+    def edit_theme():
+        def set_valid_theme(new_theme):
+            settings.theme = new_theme
+
+        generic_menu(
+            [
+                ("Light", lambda: set_valid_theme("light")),
+                ("Dark", lambda: set_valid_theme("dark")),
+                ("System", lambda: set_valid_theme("system")),
+                ("(Back to settings menu)", lambda: None),
+            ],
+            "Theme",
+            f"Current setting: {settings.theme}",
+        )
+
+    def edit_fee_type():
+        def set_valid_fee_type(new_fee_type):
+            settings.fee_type = new_fee_type
+
+        generic_menu(
+            [
+                ("Low", lambda: set_valid_fee_type("low")),
+                ("Normal", lambda: set_valid_fee_type("normal")),
+                ("Priority", lambda: set_valid_fee_type("priority")),
+                ("(Back to settings menu)", lambda: None),
+            ],
+            "Fee Type",
+            f"Current setting: {settings.fee_type}",
+        )
+
+    def edit_address_type():
+        def set_valid_address_type(new_address_type):
+            settings.address_type = new_address_type
+
+        generic_menu(
+            [
+                ("Segwit", lambda: set_valid_address_type("segwit")),
+                ("Bech32", lambda: set_valid_address_type("bech32")),
+                ("Legacy", lambda: set_valid_address_type("legacy")),
+                ("(Back to settings menu)", lambda: None),
+            ],
+            "Address Type",
+            f"Current setting: {settings.address_type}",
+        )
+
+    def edit_unit():
+        def set_valid_unit(new_unit):
+            settings.unit = new_unit
+
+        generic_menu(
+            [
+                ("BTC", lambda: set_valid_unit("BTC")),
+                ("mBTC", lambda: set_valid_unit("mBTC")),
+                ("sats", lambda: set_valid_unit("sats")),
+                ("(Back to settings menu)", lambda: None),
+            ],
+            "Unit",
+            f"Current setting: {settings.unit}",
+        )
+
+    def edit_confirmations():
+        def set_valid_confirmations(new_confirmations):
+            settings.confirmations = new_confirmations
+
+        generic_menu(
+            [
+                ("0", lambda: set_valid_confirmations(0)),
+                ("1", lambda: set_valid_confirmations(1)),
+                ("2", lambda: set_valid_confirmations(2)),
+                ("3", lambda: set_valid_confirmations(3)),
+                ("4", lambda: set_valid_confirmations(4)),
+                ("5", lambda: set_valid_confirmations(5)),
+                ("6", lambda: set_valid_confirmations(6)),
+                ("(Back to settings menu)", lambda: None),
+            ],
+            "Confirmations",
+            f"Current setting: {settings.confirmations}",
+        )
+
+    menu_options = [
+        ("Change currency", edit_currency),
+        ("Change language", edit_language),
+        ("Change theme", edit_theme),
+        ("Change fee type", edit_fee_type),
+        ("Change address type", edit_address_type),
+        ("Change unit", edit_unit),
+        ("Change confirmations", edit_confirmations),
+        ("Back to main menu", lambda: None),
+    ]
+    generic_menu(menu_options, UIStrings.SETTINGS_MENU)

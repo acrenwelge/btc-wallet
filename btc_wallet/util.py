@@ -3,12 +3,26 @@ from enum import Enum
 
 from blessed import Terminal
 
+from .user_settings import UserSettings
 from .validate import Validation
+
+settings = UserSettings.get_instance()
 
 
 class Modes(Enum):
     TEST = "test"
     PROD = "prod"
+
+
+""" UI UTILITIES """
+
+
+def print_with_theme(term: Terminal, text: str):
+    """Prints text using the current theme"""
+    if settings.theme == "dark":
+        print(term.white_on_darkslateblue + text)
+    else:
+        print(term.darkslateblue_on_white + text)
 
 
 def press_any_key_to_return(term: Terminal, prompt: str = ""):
@@ -46,6 +60,9 @@ def get_user_input(term: Terminal, line: int, prompt: str) -> str:
             quit()
 
 
+"""" VALIDATION UTILITIES """
+
+
 def btc_addr_is_valid(addr: str, mode: Modes):
     """Check if a Bitcoin address is valid for the specified mode (testnet or prod).
     `Modes.TEST` used for validating testnet addresses.
@@ -65,6 +82,21 @@ def btc_addr_is_valid(addr: str, mode: Modes):
 def get_btc_addr_type(addr):
     return Validation.get_btc_addr_type(addr)
 
+
+""" LIFECYCLE UTILITIES """
+
+
+def on_shutdown(term: Terminal):
+    """Called when exiting all menus and the application is shutting down.
+    Saves any necessary data and performs cleanup tasks
+    """
+    logging.info("Shutting down...")
+    settings.save_settings()
+    print(term.clear())
+    quit()
+
+
+""" CONVERSIONS"""
 
 SATS_PER_BTC = 100_000_000
 

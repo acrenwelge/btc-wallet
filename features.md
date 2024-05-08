@@ -2,31 +2,28 @@
 
 ## Ideas
 
-* Add support for other languages (in UI and for seed phrase generation)
-* Use a different address per transaction (following BIP 32)
 * Search for transactions by date, amount, or address
 * Implement a notification system for transaction confirmations
 * Generate new keys until a desired address is found (for vanity addresses)
+* Use a different address per transaction (following BIP 32)
 * Implement multi-signature wallets for added security
 * Integrate with hardware wallets
+* Add lightning network support
 * Autocomplete for seed phrase recovery
 * Add a feature to estimate transaction fees
-* Implement a backup system for the wallet
 * Add a feature to import/export private keys
 * Add a feature to set custom transaction fees (make this configurable by the user)
-* Implement a light/dark mode for the UI
 * Add a feature to show the current cryptocurrency market rates (could use my other project)
 * Implement a feature to schedule recurring transactions
 * Implement a privacy mode that hides balance and transaction amounts
-* Add a feature to automatically update the wallet software.
+* Add a feature to automatically update the wallet software
+* Add support for other languages (in UI and for seed phrase generation)
 
-In progress:
+## In progress
 
 * Make user settings configurable and save them to a file
 
-Bugs to fix:
-
-Completed:
+## Completed Features
 
 * Login
 * Recover from seed phrase backup
@@ -51,8 +48,14 @@ Completed:
 * Encrypt wallet seed file
 * Cache the balance of an address to avoid querying the blockchain every time, and set a TTL for the cache
 * Lookup an address balance given a public key or xpub
+* Light / dark mode (user theme setting)
 
-Bugs fixed:
+## Defects
+
+### Known Bugs
+
+### Bugs Fixed
+
 ✅ Off by one error in contact selection
 ✅ View txs should be blank when no wallet exists
 ✅ Seed should be encrypted when recovering from seed phrase
