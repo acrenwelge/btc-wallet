@@ -1,28 +1,15 @@
+import json
 import logging
-import pickle
 from os.path import expanduser
 
 
 class UserSettings:
-    _instance = None
-
     def __init__(self) -> None:
         try:
             self.load_settings()
         except FileNotFoundError:
             self.set_defaults()
             self.save_settings()  # Save default settings if none found
-
-    def __new__(cls, *args, **kwargs):
-        if not cls._instance:
-            cls._instance = super().__new__(cls, *args, **kwargs)
-        return cls._instance
-
-    @classmethod
-    def get_instance(cls):
-        if cls._instance is None:
-            cls._instance = cls()
-        return cls._instance
 
     @property
     def currency(self):
@@ -160,15 +147,15 @@ class UserSettings:
         self._confirmations = new_confirmations
 
     def load_settings(self):
-        with open(expanduser("~/.wallet/settings.pkl"), "rb") as f:
-            settings = pickle.load(f)
-            self._currency = settings.currency
-            self._language = settings.language
-            self._theme = settings.theme
-            self._fee_type = settings.fee_type
-            self._address_type = settings.address_type
-            self._unit = settings.unit
-            self._confirmations = settings.confirmations
+        with open(expanduser("~/.wallet/settings.json"), "r") as f:
+            settings = json.load(f)
+            self._currency = settings["currency"]
+            self._language = settings["language"]
+            self._theme = settings["theme"]
+            self._fee_type = settings["fee_type"]
+            self._address_type = settings["address_type"]
+            self._unit = settings["unit"]
+            self._confirmations = settings["confirmations"]
 
     def set_defaults(self):
         self._currency = "USD"
@@ -179,9 +166,21 @@ class UserSettings:
         self._unit = "BTC"
         self._confirmations = "6"
 
+    def to_dict(self):
+        return {
+            "currency": self.currency,
+            "language": self.language,
+            "theme": self.theme,
+            "fee_type": self.fee_type,
+            "address_type": self.address_type,
+            "unit": self.unit,
+            "confirmations": self.confirmations,
+        }
+
     def save_settings(self):
+        settings = self.to_dict()
         try:
-            with open(expanduser("~/.wallet/settings.pkl"), "wb") as f:
-                pickle.dump(self._instance, f)
+            with open(expanduser("~/.wallet/settings.json"), "w") as f:
+                f.write(json.dumps(settings))
         except IOError:
             logging.error("Error saving settings")

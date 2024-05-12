@@ -21,4 +21,7 @@ def lookup_balance(mode, address_or_xpub):
         logging.error(
             f"Failed to retrieve balance. Status code: {response.status_code}"
         )
+        print(
+            "Are you sure the address is correct? Are you on the right network (testnet vs mainnet)?"
+        )
         return None

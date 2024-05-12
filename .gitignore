@@ -4,6 +4,7 @@
 # Custom
 testnet-endpoint.txt
 .DS_Store
+transactions.csv
 
 ### Python ###
 # Byte-compiled / optimized / DLL files

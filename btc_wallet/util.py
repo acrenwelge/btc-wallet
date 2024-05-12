@@ -3,18 +3,26 @@ from enum import Enum
 
 from blessed import Terminal
 
-from .user_settings import UserSettings
+from btc_wallet.application_context import ApplicationContext, Modes
+
 from .validate import Validation
 
-settings = UserSettings.get_instance()
-
-
-class Modes(Enum):
-    TEST = "test"
-    PROD = "prod"
+settings = ApplicationContext.get_user_settings()
 
 
 """ UI UTILITIES """
+
+
+class UIStrings:
+    MAIN_MENU = "MAIN MENU"
+    WALLET_MENU = "WALLET MENU"
+    CONTACT_MENU = "CONTACT MENU"
+    TX_SEND_MENU = "SEND BITCOIN"
+    SETTINGS_MENU = "USER SETTINGS"
+
+    @classmethod
+    def to_menu(cls, menu_name: str):
+        return f"to the {menu_name.lower()}"
 
 
 def print_with_theme(term: Terminal, text: str):
