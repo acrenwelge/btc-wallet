@@ -1,5 +1,4 @@
 import logging
-from enum import Enum
 
 from blessed import Terminal
 
@@ -28,9 +27,9 @@ class UIStrings:
 def print_with_theme(term: Terminal, text: str):
     """Prints text using the current theme"""
     if settings.theme == "dark":
-        print(term.white_on_darkslateblue + text)
+        print(term.white_on_midnightblue + text)
     else:
-        print(term.darkslateblue_on_white + text)
+        print(term.midnightblue_on_white + text)
 
 
 def press_any_key_to_return(term: Terminal, prompt: str = ""):
@@ -39,12 +38,12 @@ def press_any_key_to_return(term: Terminal, prompt: str = ""):
     key = get_keypress(term)
     if not key:
         logging.warn("Logging out due to inactivity")
-        quit()
+        on_shutdown(term)
 
 
 def get_keypress(term: Terminal):
-    """Gets a Keystroke from terminal using a default timeout
-    All '.inkey()' calls should be wrapped by this function to ensure consistency
+    """Gets a Keystroke from terminal using a default timeout \n
+    All `.inkey()` calls should be wrapped by this function to ensure consistency
     """
     return term.inkey(timeout=60)
 
@@ -72,9 +71,9 @@ def get_user_input(term: Terminal, line: int, prompt: str) -> str:
 
 
 def btc_addr_is_valid(addr: str, mode: Modes):
-    """Check if a Bitcoin address is valid for the specified mode (testnet or prod).
-    `Modes.TEST` used for validating testnet addresses.
-    `Modes.PROD` used for validating mainnet addresses.
+    """Check if a Bitcoin address is valid for the specified mode (testnet or prod). \n
+    `Modes.TEST` used for validating testnet addresses. \n
+    `Modes.PROD` used for validating mainnet addresses. \n
     Providing a mainnet address with `Modes.TEST` should return `False`, vice versa for testnet addresses
     """
     if mode == Modes.PROD:

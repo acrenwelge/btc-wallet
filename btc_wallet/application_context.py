@@ -14,6 +14,7 @@ class ApplicationContext:
     _terminal = None
     _user_settings = None
     _mode = None
+    _main_menu = None
 
     @classmethod
     def get_terminal(cls):
@@ -28,9 +29,9 @@ class ApplicationContext:
         return cls._user_settings
 
     @classmethod
-    def set_mode(cls, mode: Modes):
-        cls._mode = mode
-
-    @classmethod
     def get_mode(cls):
         return cls._mode
+
+    @classmethod
+    def get_main_menu(cls):
+        return cls._main_menu

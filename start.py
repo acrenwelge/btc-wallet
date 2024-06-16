@@ -3,7 +3,11 @@ from argparse import ArgumentParser
 
 from btc_wallet.application_context import ApplicationContext
 from btc_wallet.contact_mgr import ContactManager
-from btc_wallet.menus.main import Main
+from btc_wallet.menus.contacts import ContactMenu
+from btc_wallet.menus.main import MainMenu
+from btc_wallet.menus.send_transactions import SendTransactionsMenu
+from btc_wallet.menus.view_transactions import ViewTransactionsMenu
+from btc_wallet.menus.wallet import WalletMenu
 from btc_wallet.tx_service import TxService
 from btc_wallet.util import Modes
 from btc_wallet.wallet_mgr import WalletManager
@@ -36,11 +40,28 @@ def configure_and_start():
     if args.mode not in [Modes.PROD, Modes.TEST]:
         raise ValueError('Mode must be either "test" or "prod"')
     # Configure application objects
-    ApplicationContext.set_mode(args.mode)
+    ApplicationContext._mode = args.mode
     contact_mgr = ContactManager(mode=args.mode)
     wallet_mgr = WalletManager(mode=args.mode)
     tx_service = TxService(mode=args.mode)
-    Main(ApplicationContext, contact_mgr, wallet_mgr, tx_service).start()
+    # Initialize menus
+    t = ApplicationContext.get_terminal()
+    wallet_menu = WalletMenu(t, wallet_mgr)
+    contact_menu = ContactMenu(t, contact_mgr, args.mode)
+    view_txs_menu = ViewTransactionsMenu(ApplicationContext, tx_service, wallet_mgr)
+    tx_send_menu = SendTransactionsMenu(t, contact_mgr, wallet_mgr)
+    main_menu = MainMenu(
+        contact_mgr,
+        wallet_mgr,
+        tx_service,
+        wallet_menu,
+        contact_menu,
+        view_txs_menu,
+        tx_send_menu,
+    )
+    ApplicationContext._main_menu = main_menu
+    logging.debug("Objects configured. Starting main loop...")
+    main_menu.start()
 
 
 if __name__ == "__main__":

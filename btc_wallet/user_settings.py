@@ -17,10 +17,12 @@ class UserSettings:
 
     @currency.setter
     def currency(self, new_currency):
-        # TODO: Define list of valid currencies
-        if new_currency not in ["USD", "EUR", "GBP"]:
+        if new_currency not in self.supported_currencies():
             raise ValueError("Invalid currency")
         self._currency = new_currency
+
+    def supported_currencies(self):
+        return ["USD", "EUR", "GBP", "JPY", "CNY"]
 
     @property
     def language(self):

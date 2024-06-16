@@ -3,11 +3,14 @@ import subprocess
 from shutil import which
 
 import qrcode
+from babel.numbers import format_currency
 from blessed import Terminal
 
+from btc_wallet.application_context import ApplicationContext
 from btc_wallet.menus.generic import generic_menu
 from btc_wallet.wallet_mgr import WalletAlreadyExistsError, WalletManager
 
+from ..price_service import get_btc_price
 from ..util import (
     SATS_PER_BTC,
     UIStrings,
@@ -44,6 +47,10 @@ class WalletMenu:
                     print(f"Balance: {bal} sats")
                 else:  # display as btc if > 0.001 btc
                     print(f"Balance: {sats_to_btc(bal):,.8f} btc")
+                price = get_btc_price(currency="usd")
+                fiat_bal = sats_to_btc(bal) * price
+                fiat_cur = ApplicationContext.get_user_settings().currency
+                print(f"Current fiat balance: {format_currency(fiat_bal, fiat_cur)}")
                 with self.t.location(0, self.t.height - 2):
                     if copied:
                         print(self.t.bold_reverse("Address copied to clipboard!"))

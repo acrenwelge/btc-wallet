@@ -4,7 +4,7 @@ from getpass import getpass
 from blessed import Terminal
 from cryptography.fernet import InvalidToken
 
-from btc_wallet.application_context import ApplicationContext, Modes
+from btc_wallet.application_context import ApplicationContext
 from btc_wallet.blockchain_client import lookup_balance
 from btc_wallet.contact_mgr import ContactManager
 from btc_wallet.menus.contacts import ContactMenu
@@ -13,51 +13,52 @@ from btc_wallet.menus.send_transactions import SendTransactionsMenu
 from btc_wallet.menus.settings import settings_menu
 from btc_wallet.menus.view_transactions import ViewTransactionsMenu
 from btc_wallet.menus.wallet import WalletMenu
+from btc_wallet.price_service import get_btc_price
 from btc_wallet.tx_service import TxService
 from btc_wallet.util import (
     UIStrings,
     get_keypress,
     get_user_input,
-    on_shutdown,
     press_any_key_to_return,
     sats_to_btc,
 )
 from btc_wallet.wallet_mgr import WalletManager
 
 
-class Main:
+class MainMenu:
 
     def __init__(
         self,
-        app_ctx: ApplicationContext,
-        cm: ContactManager,
-        wm: WalletManager,
+        contact_mgr: ContactManager,
+        wallet_mgr: WalletManager,
         tx_service: TxService,
+        wallet_menu: WalletMenu,
+        contact_menu: ContactMenu,
+        view_txs_menu: ViewTransactionsMenu,
+        tx_send_menu: SendTransactionsMenu,
     ):
-        self.app_ctx = app_ctx
-        self.cm = cm
-        self.wm = wm
+        self.contact_mgr = contact_mgr
+        self.wallet_mgr = wallet_mgr
         self.tx_service = tx_service
+        self.wallet_menu = wallet_menu
+        self.contact_menu = contact_menu
+        self.view_txs_menu = view_txs_menu
+        self.tx_send_menu = tx_send_menu
 
     def start(self):
-        t = self.app_ctx.get_terminal()
-        mode = self.app_ctx.get_mode()
+        t = ApplicationContext.get_terminal()
+        mode = ApplicationContext.get_mode()
         logging.info(f"Starting app in {mode.value} mode...")
-        # Initialize menus
-        wallet_menu = WalletMenu(t, self.wm)
-        contact_menu = ContactMenu(t, self.cm, mode)
-        view_txs_menu = ViewTransactionsMenu(self.app_ctx, self.tx_service, self.wm)
-        tx_send_menu = SendTransactionsMenu(t, self.cm, self.wm)
         # Login
         success = self.login(t)
         if success:
-            self.main_menu(wallet_menu, contact_menu, view_txs_menu, tx_send_menu)
+            self.show()
         else:
             logging.error("Login failed - quitting")
-        on_shutdown(t)
+        # on_shutdown(t)
 
     def login(self, t: Terminal) -> bool:
-        if not self.wm.seedfile_exists():
+        if not self.wallet_mgr.seedfile_exists():
             print(
                 """
     *******************************************************************************
@@ -67,13 +68,14 @@ class Main:
     """
             )
             print("Press any key to continue")
-            get_keypress(t)
-            return True
+            with t.cbreak():
+                get_keypress(t)
+                return True
         tries = 3
         while tries > 0:
             pw = getpass()
             try:
-                self.wm.load_seed(pw)
+                self.wallet_mgr.load_seed(pw)
                 logging.info("Wallet loaded successfully")
                 return True
             except InvalidToken:
@@ -85,27 +87,22 @@ class Main:
         logging.info("Maximum password attempts reached")
         return False
 
-    def main_menu(
-        self,
-        wallet_menu: WalletMenu,
-        contact_menu: ContactMenu,
-        view_txs_menu: ViewTransactionsMenu,
-        tx_send_menu: SendTransactionsMenu,
-    ):
+    def show(self):
         menu_options = [
-            ("Bitcoin wallet", wallet_menu.show),
-            ("Manage contact list", contact_menu.show),
+            ("Bitcoin wallet", self.wallet_menu.show),
+            ("Manage contact list", self.contact_menu.show),
             ("Lookup bitcoin address", self.lookup_address),
-            ("View bitcoin transactions", view_txs_menu.show),
-            ("Send bitcoin", tx_send_menu.show),
+            ("View bitcoin transactions", self.view_txs_menu.show),
+            ("Send bitcoin", self.tx_send_menu.show),
+            ("Bitcoin current price", self.show_fiat_price),
             ("Change settings", settings_menu),
             ("Quit", lambda: None),
         ]
         generic_menu(menu_options, UIStrings.MAIN_MENU)
 
     def lookup_address(self):
-        mode = self.app_ctx.get_mode()
-        t = self.app_ctx.get_terminal()
+        t = ApplicationContext.get_terminal()
+        mode = ApplicationContext.get_mode()
         with t.fullscreen():
             print(t.clear())
             addr = get_user_input(t, 1, "Enter the bitcoin address or xpub to look up:")
@@ -117,3 +114,14 @@ class Main:
                 else:
                     print("Error retrieving balance - please try again")
             press_any_key_to_return(t, "to the main menu")
+            self.show()
+
+    def show_fiat_price(self):
+        t = ApplicationContext.get_terminal()
+        cur = ApplicationContext.get_user_settings().currency
+        price = get_btc_price(currency=cur)
+        with t.fullscreen():
+            print(t.clear())
+            print(f"Current price of Bitcoin: ${price}")
+            press_any_key_to_return(t, "to the main menu")
+            self.show()
