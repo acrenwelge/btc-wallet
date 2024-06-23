@@ -1,6 +1,8 @@
 import logging
 from getpass import getpass
 
+from babel.numbers import format_currency
+from bit.network import satoshi_to_currency
 from blessed import Terminal
 from cryptography.fernet import InvalidToken
 
@@ -13,9 +15,9 @@ from btc_wallet.menus.send_transactions import SendTransactionsMenu
 from btc_wallet.menus.settings import settings_menu
 from btc_wallet.menus.view_transactions import ViewTransactionsMenu
 from btc_wallet.menus.wallet import WalletMenu
-from btc_wallet.price_service import get_btc_price
 from btc_wallet.tx_service import TxService
 from btc_wallet.util import (
+    SATS_PER_BTC,
     UIStrings,
     get_keypress,
     get_user_input,
@@ -119,9 +121,9 @@ class MainMenu:
     def show_fiat_price(self):
         t = ApplicationContext.get_terminal()
         cur = ApplicationContext.get_user_settings().currency
-        price = get_btc_price(currency=cur)
+        price = satoshi_to_currency(SATS_PER_BTC, cur)
         with t.fullscreen():
             print(t.clear())
-            print(f"Current price of Bitcoin: ${price}")
+            print(f"Current price of Bitcoin: {format_currency(price, cur.upper())}")
             press_any_key_to_return(t, "to the main menu")
             self.show()

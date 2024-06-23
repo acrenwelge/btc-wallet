@@ -2,6 +2,8 @@ import json
 import logging
 from os.path import expanduser
 
+from bit import SUPPORTED_CURRENCIES
+
 
 class UserSettings:
     def __init__(self) -> None:
@@ -17,12 +19,9 @@ class UserSettings:
 
     @currency.setter
     def currency(self, new_currency):
-        if new_currency not in self.supported_currencies():
+        if new_currency not in SUPPORTED_CURRENCIES:
             raise ValueError("Invalid currency")
         self._currency = new_currency
-
-    def supported_currencies(self):
-        return ["USD", "EUR", "GBP", "JPY", "CNY"]
 
     @property
     def language(self):

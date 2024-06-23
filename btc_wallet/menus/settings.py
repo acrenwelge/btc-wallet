@@ -1,5 +1,7 @@
 from functools import partial
 
+from bit import SUPPORTED_CURRENCIES
+
 from btc_wallet.application_context import ApplicationContext
 from btc_wallet.menus.generic import generic_menu
 from btc_wallet.util import UIStrings, press_any_key_to_return
@@ -8,7 +10,9 @@ settings = ApplicationContext.get_user_settings()
 back_to_settings_menu = "(Back to settings menu)"
 
 
-def make_tuple(func, arg):
+def make_menu_tuple(func, arg, menu_text: str = None):
+    if menu_text:
+        return (menu_text + " (" + str(arg) + ")", partial(func, arg))
     return (arg, partial(func, arg))
 
 
@@ -23,10 +27,14 @@ def display_msg(setting, new_value):
 def edit_currency():
     def set_valid_currency(new_currency):
         settings.currency = new_currency
+        settings.save_settings()
         display_msg("Currency", new_currency)
 
     tuples = [
-        make_tuple(set_valid_currency, cur) for cur in settings.supported_currencies()
+        make_menu_tuple(set_valid_currency, cur, SUPPORTED_CURRENCIES[cur])
+        for cur in SUPPORTED_CURRENCIES
+        if cur
+        not in ["btc", "satoshi", "mbtc", "ubtc"]  # exclude btc - only selecting fiat
     ]
     tuples.append((back_to_settings_menu, lambda: None))
     generic_menu(tuples, "Currency", f"Current setting: {settings.currency}")
@@ -35,6 +43,7 @@ def edit_currency():
 def edit_language():
     def set_valid_language(new_language):
         settings.language = new_language
+        settings.save_settings()
         display_msg("Language", new_language)
 
     generic_menu(
@@ -51,6 +60,7 @@ def edit_language():
 def edit_theme():
     def set_valid_theme(new_theme):
         settings.theme = new_theme
+        settings.save_settings()
         display_msg("Theme", new_theme)
 
     generic_menu(
@@ -68,13 +78,14 @@ def edit_theme():
 def edit_fee_type():
     def set_valid_fee_type(new_fee_type):
         settings.fee_type = new_fee_type
+        settings.save_settings()
         display_msg("Fee Type", new_fee_type)
 
     generic_menu(
         [
-            ("Low", lambda: set_valid_fee_type("low")),
-            ("Normal", lambda: set_valid_fee_type("normal")),
-            ("Priority", lambda: set_valid_fee_type("priority")),
+            ("Lowest (slow)", lambda: set_valid_fee_type("low")),
+            ("Normal (average speed)", lambda: set_valid_fee_type("normal")),
+            ("Priority (fastest)", lambda: set_valid_fee_type("priority")),
             (back_to_settings_menu, lambda: None),
         ],
         "Fee Type",
@@ -85,6 +96,7 @@ def edit_fee_type():
 def edit_address_type():
     def set_valid_address_type(new_address_type):
         settings.address_type = new_address_type
+        settings.save_settings()
         display_msg("Address Type", new_address_type)
 
     generic_menu(
@@ -102,6 +114,7 @@ def edit_address_type():
 def edit_unit():
     def set_valid_unit(new_unit):
         settings.unit = new_unit
+        settings.save_settings()
         display_msg("Unit", new_unit)
 
     generic_menu(
@@ -117,12 +130,16 @@ def edit_unit():
 
 
 def edit_confirmations():
+    # Confirmations are the number of blocks that need to be mined before a transaction is considered confirmed
+    # TODO: fix menu
+    # TODO: alert when number of tx confirmations reaches the number of confirmations set in the settings
     def set_valid_confirmations(new_confirmations):
         settings.confirmations = new_confirmations
+        settings.save_settings()
         display_msg("Confirmations", new_confirmations)
 
     tuples = [
-        make_tuple(set_valid_confirmations, conf) for conf in [0, 1, 2, 3, 4, 5, 6]
+        make_menu_tuple(set_valid_confirmations, conf) for conf in [0, 1, 2, 3, 4, 5, 6]
     ]
     tuples.append((back_to_settings_menu, lambda: None))
 

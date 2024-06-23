@@ -49,10 +49,14 @@
 * Cache the balance of an address to avoid querying the blockchain every time, and set a TTL for the cache
 * Lookup an address balance given a public key or xpub
 * Light / dark mode (user theme setting)
+* Add support for other languages
 
 ## Defects
 
 ### Known Bugs
+
+* Settings menu does not exit after changing settings
+* Selecting "Quit" does not exit if a menu option has been selected
 
 ### Bugs Fixed
 
