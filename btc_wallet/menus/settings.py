@@ -4,6 +4,7 @@ from bit import SUPPORTED_CURRENCIES
 
 from btc_wallet.application_context import ApplicationContext
 from btc_wallet.menus.generic import generic_menu
+from btc_wallet.user_settings import BTCUnits
 from btc_wallet.util import UIStrings, press_any_key_to_return
 
 settings = ApplicationContext.get_user_settings()
@@ -83,9 +84,14 @@ def edit_fee_type():
 
     generic_menu(
         [
-            ("Lowest (slow)", lambda: set_valid_fee_type("low")),
-            ("Normal (average speed)", lambda: set_valid_fee_type("normal")),
-            ("Priority (fastest)", lambda: set_valid_fee_type("priority")),
+            (
+                "Normal (will confirm transactions within an hour (with 90% probability))",
+                lambda: set_valid_fee_type("normal"),
+            ),
+            (
+                "Priority / fastest (usually 0 to 1 block delay)",
+                lambda: set_valid_fee_type("priority"),
+            ),
             (back_to_settings_menu, lambda: None),
         ],
         "Fee Type",
@@ -112,20 +118,21 @@ def edit_address_type():
 
 
 def edit_unit():
-    def set_valid_unit(new_unit):
+    def set_valid_unit(new_unit: BTCUnits):
         settings.unit = new_unit
         settings.save_settings()
-        display_msg("Unit", new_unit)
+        display_msg("Unit", new_unit.name)
 
     generic_menu(
         [
-            ("BTC", lambda: set_valid_unit("BTC")),
-            ("mBTC", lambda: set_valid_unit("mBTC")),
-            ("sats", lambda: set_valid_unit("sats")),
+            (BTCUnits.BTC.name, lambda: set_valid_unit(BTCUnits.BTC)),
+            (BTCUnits.mBTC.name, lambda: set_valid_unit(BTCUnits.mBTC)),
+            (BTCUnits.uBTC.name, lambda: set_valid_unit(BTCUnits.uBTC)),
+            (BTCUnits.sats.name, lambda: set_valid_unit(BTCUnits.sats)),
             (back_to_settings_menu, lambda: None),
         ],
         "Unit",
-        f"Current setting: {settings.unit}",
+        f"Current setting: {settings.unit.name}",
     )
 
 
@@ -153,10 +160,9 @@ def edit_confirmations():
 def settings_menu():
     menu_options = [
         ("Change currency", edit_currency),
-        ("Change language", edit_language),
+        # ("Change language", edit_language),
         ("Change theme", edit_theme),
         ("Change fee type", edit_fee_type),
-        ("Change address type", edit_address_type),
         ("Change unit", edit_unit),
         ("Change confirmations", edit_confirmations),
         ("Back to main menu", lambda: None),

@@ -11,14 +11,7 @@ from btc_wallet.application_context import ApplicationContext
 from btc_wallet.menus.generic import generic_menu
 from btc_wallet.wallet_mgr import WalletAlreadyExistsError, WalletManager
 
-from ..util import (
-    SATS_PER_BTC,
-    UIStrings,
-    get_keypress,
-    get_user_input,
-    press_any_key_to_return,
-    sats_to_btc,
-)
+from ..util import UIStrings, get_keypress, get_user_input, press_any_key_to_return
 
 
 class WalletMenu:
@@ -42,14 +35,14 @@ class WalletMenu:
                     return
                 print(addr)
                 self.show_qr(addr)
-                bal = self.wm.get_bal()
-                if bal < (SATS_PER_BTC / 1000):  # display as sats if < 0.001 btc
-                    print(f"Balance: {bal} sats")
-                else:  # display as btc if > 0.001 btc
-                    print(f"Balance: {sats_to_btc(bal):,.8f} btc")
+                sat_bal = self.wm.get_bal_sats()
+                # convert to unit of user's choice
+                btc_unit = ApplicationContext.get_user_settings().unit.value
+                print(
+                    f"Balance: {satoshi_to_currency(sat_bal,btc_unit)} {btc_unit.upper()}"
+                )
                 cur = ApplicationContext.get_user_settings().currency
-                price = satoshi_to_currency(SATS_PER_BTC, cur)
-                fiat_bal = sats_to_btc(bal) * price
+                fiat_bal = satoshi_to_currency(sat_bal, cur)
                 fiat_cur = ApplicationContext.get_user_settings().currency
                 print(
                     f"Current fiat balance: {format_currency(fiat_bal, fiat_cur.upper())}"

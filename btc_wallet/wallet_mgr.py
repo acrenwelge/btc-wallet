@@ -82,7 +82,8 @@ class WalletManager:
             raise ValueError("No wallet found")
         return key.address
 
-    def get_bal(self) -> int:
+    def get_bal_sats(self) -> int:
+        """Get the wallet balance in satoshis from the blockchain or cache."""
         if self.balance_cache is None or time.time() > self.balance_cache[1]:
             bal = int(self.get_prvkey().get_balance())
             self.get_prvkey().balance
@@ -90,6 +91,9 @@ class WalletManager:
         return self.balance_cache[0]
 
     def get_wif(self):
+        """Wallet Import Format (WIF) for the private key.
+        Contains metadata that specifies the network and whether the key is compressed or not.
+        """
         return self.get_prvkey().to_wif()
 
     def get_prvkey(self) -> Key | PrivateKeyTestnet:

@@ -1,8 +1,21 @@
 import json
 import logging
+from enum import Enum
 from os.path import expanduser
 
 from bit import SUPPORTED_CURRENCIES
+
+
+class BTCUnits(Enum):
+    BTC = "btc"
+    mBTC = "mbtc"
+    uBTC = "ubtc"
+    sats = "satoshi"
+
+
+class FeeTypes(Enum):
+    normal = "normal"
+    priority = "priority"
 
 
 class UserSettings:
@@ -113,27 +126,17 @@ class UserSettings:
 
     @fee_type.setter
     def fee_type(self, new_fee_type):
-        if new_fee_type not in ["low", "normal", "priority"]:
+        if new_fee_type not in FeeTypes.__members__:
             raise ValueError("Invalid fee type")
         self._fee_type = new_fee_type
-
-    @property
-    def address_type(self):
-        return self._address_type
-
-    @address_type.setter
-    def address_type(self, new_address_type):
-        if new_address_type not in ["segwit", "bech32", "legacy"]:
-            raise ValueError("Invalid address type")
-        self._address_type = new_address_type
 
     @property
     def unit(self):
         return self._unit
 
     @unit.setter
-    def unit(self, new_unit):
-        if new_unit not in ["BTC", "mBTC", "sats"]:
+    def unit(self, new_unit: BTCUnits):
+        if new_unit not in BTCUnits:
             raise ValueError("Invalid unit")
         self._unit = new_unit
 
@@ -154,8 +157,7 @@ class UserSettings:
             self._language = settings["language"]
             self._theme = settings["theme"]
             self._fee_type = settings["fee_type"]
-            self._address_type = settings["address_type"]
-            self._unit = settings["unit"]
+            self._unit = BTCUnits[settings["unit"]]
             self._confirmations = settings["confirmations"]
 
     def set_defaults(self):
@@ -163,8 +165,7 @@ class UserSettings:
         self._language = "en"
         self._theme = "light"
         self._fee_type = "normal"
-        self._address_type = "segwit"
-        self._unit = "BTC"
+        self._unit = BTCUnits.BTC
         self._confirmations = "6"
 
     def to_dict(self):
@@ -173,8 +174,7 @@ class UserSettings:
             "language": self.language,
             "theme": self.theme,
             "fee_type": self.fee_type,
-            "address_type": self.address_type,
-            "unit": self.unit,
+            "unit": self.unit.name,
             "confirmations": self.confirmations,
         }
 

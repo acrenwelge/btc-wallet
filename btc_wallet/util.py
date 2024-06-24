@@ -106,11 +106,3 @@ def on_shutdown(term: Terminal):
 """ CONVERSIONS"""
 
 SATS_PER_BTC = 100_000_000
-
-
-def btc_to_sats(btc: float):
-    return int(btc * SATS_PER_BTC)
-
-
-def sats_to_btc(sats: int):
-    return sats / SATS_PER_BTC

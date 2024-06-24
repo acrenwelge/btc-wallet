@@ -22,7 +22,6 @@ from btc_wallet.util import (
     get_keypress,
     get_user_input,
     press_any_key_to_return,
-    sats_to_btc,
 )
 from btc_wallet.wallet_mgr import WalletManager
 
@@ -112,7 +111,9 @@ class MainMenu:
             with t.location(0, 4):
                 if sat_balance is not None:
                     print(f"Balance for {addr}: {sat_balance} sats")
-                    print(f"Balance for {addr}: {sats_to_btc(sat_balance)} BTC")
+                    print(
+                        f"Balance for {addr}: {satoshi_to_currency(sat_balance,'btc')} BTC"
+                    )
                 else:
                     print("Error retrieving balance - please try again")
             press_any_key_to_return(t, "to the main menu")

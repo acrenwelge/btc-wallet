@@ -1,9 +1,12 @@
 import logging
 
 from bit.exceptions import InsufficientFunds
+from bit.network import get_fee
 from blessed import Terminal
 
+from btc_wallet.application_context import ApplicationContext
 from btc_wallet.contact_mgr import ContactManager
+from btc_wallet.user_settings import FeeTypes
 from btc_wallet.util import UIStrings, get_user_input, press_any_key_to_return
 from btc_wallet.wallet_mgr import WalletManager
 
@@ -22,32 +25,18 @@ class SendTransactionsMenu:
                 logging.error("Contact not found - please enter a valid contact ID")
                 press_any_key_to_return(self.t, UIStrings.to_menu(UIStrings.MAIN_MENU))
                 return
-            to_addr = contact.addr
-            bal = str(self.wm.get_bal())
-            print(f"Your available balance: {bal} sats")
+            bal = self.wm.get_bal_sats()
+            print(f"Your available balance: {str(bal)} sats")
             amount = int(
                 get_user_input(
                     self.t, 4, "How much BTC would you like to send (in sats)?"
                 )
             )
-            print(
-                f"""Transaction Summary:
-    TO (NAME) = {contact.name}
-    TO (ADDRESS) = {to_addr}
-    AMOUNT = {amount} satoshis
-    """
-            )
-            yn = get_user_input(
-                self.t, 11, "Are you sure you want to send this transaction? (y/n) "
-            )
-            if yn == "y":
-                try:
-                    txid = self.wm.get_prvkey().send([(to_addr, amount, "satoshi")])
-                    logging.info(f"Transaction completed - TXID = {txid}")
-                except InsufficientFunds:
-                    logging.error("Insufficient funds - transaction not sent")
-            else:
-                logging.warn("Transaction cancelled")
+            if amount > bal:
+                logging.error("Insufficient funds - transaction not sent")
+                press_any_key_to_return(self.t, UIStrings.to_menu(UIStrings.MAIN_MENU))
+                return
+            self.confirm_transaction(contact, amount)
             press_any_key_to_return(self.t, UIStrings.to_menu(UIStrings.MAIN_MENU))
 
     def pick_contact(self):
@@ -70,3 +59,29 @@ class SendTransactionsMenu:
             press_any_key_to_return(self.t, UIStrings.to_menu(UIStrings.MAIN_MENU))
             return
         return self.cm.get_contact(contact_id)
+
+    def confirm_transaction(self, contact, amount):
+        fee_type = ApplicationContext.get_user_settings().fee_type
+        fast_fee = True if fee_type == FeeTypes.priority.value else False
+        est_fee = get_fee(fast=fast_fee)
+        print(
+            f"""Transaction Summary:
+        TO (NAME) = {contact.name}
+        TO (ADDRESS) = {contact.to_addr}
+        AMOUNT = {amount} satoshis
+        ESTIMATED FEE = {est_fee} satoshis
+        """
+        )
+        yn = get_user_input(
+            self.t, 11, "Are you sure you want to send this transaction? (y/n) "
+        )
+        if yn == "y":
+            try:
+                txid = self.wm.get_prvkey().send(
+                    [(contact.to_addr, amount, "satoshi")], fee=est_fee
+                )
+                logging.info(f"Transaction completed - TXID = {txid}")
+            except InsufficientFunds:
+                logging.error("Insufficient funds - transaction not sent")
+        else:
+            logging.warn("Transaction cancelled")
