@@ -33,6 +33,10 @@ cd btc-wallet
 python start.py
 ```
 
+## Demo
+
+[![Watch the video](https://github.com/user-attachments/assets/209c550c-a0f1-43ab-b7dc-44f8338d22c2)](https://github.com/user-attachments/assets/209c550c-a0f1-43ab-b7dc-44f8338d22c2)
+
 ## Standards Compliance
 * [BIP-39](https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki)
 * [BIP-32](https://github.com/bitcoin/bips/blob/master/bip-0032.mediawiki)
